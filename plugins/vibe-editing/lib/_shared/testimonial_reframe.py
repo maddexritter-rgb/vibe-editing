@@ -15,6 +15,7 @@ HOW (no vidstab — vidstab rubber-banded/swam the frame):
 """
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -42,6 +43,12 @@ if VIBE_SHARED not in _sys.path:
 # ── end bootstrap ──
 import argparse, subprocess, sys
 import cv2, numpy as np
+
+try:  # hardware H.264 args (h264_amf on this machine); libx264 fallback inside the helper
+    from fast_encode import hw_h264_args
+except Exception:
+    def hw_h264_args(bitrate="16M", ffmpeg="ffmpeg"):
+        return ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p"]
 
 MODEL = _acq("horizontal-to-vertical/scripts/yunet.onnx")
 
@@ -120,7 +127,7 @@ def main():
         "ffmpeg", "-y", "-loglevel", "error",
         "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{a.ow}x{a.oh}", "-r", fr_str, "-i", "-",
         "-i", a.source, "-map", "0:v", "-map", "1:a?",
-        "-r", fr_str, "-vsync", "cfr", "-c:v", "h264_videotoolbox", "-b:v", "16M",
+        "-r", fr_str, "-vsync", "cfr", *hw_h264_args("16M"),
         "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-shortest", a.out], stdin=subprocess.PIPE)
     cap = cv2.VideoCapture(a.source); k = 0
     while k < N:

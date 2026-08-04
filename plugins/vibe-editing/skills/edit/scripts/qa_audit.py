@@ -12,7 +12,9 @@ Reference reels: ~/Downloads/qa-mining/reference-reels/  (printed for comparison
 Exit 0 = pass, 1 = fail. Usage: qa_audit.py CLIP.mp4 --edl EDL.json [--format qa] [--ref-dir DIR]
 """
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
+import tempfile
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -62,7 +64,7 @@ def yellow_frac(clip, ranges):
             times.append(t); t += 1.0
     if not times:
         return None, 0
-    tmp = f"/tmp/_qay_{os.getpid()}.png"; yes = n = 0
+    tmp = os.path.join(tempfile.gettempdir(), f"_qay_{os.getpid()}.png"); yes = n = 0
     for t in times:
         subprocess.run([FF, "-y", "-loglevel", "error", "-ss", f"{t:.2f}", "-i", clip, "-frames:v", "1", tmp], capture_output=True)
         if not os.path.exists(tmp):
@@ -112,7 +114,7 @@ def main():
 
     # AUDIO (watch/probe.py)
     pj = f"{base}_probe.json"
-    sh(["python3", f"{WATCH}/probe.py", a.clip, "--out", pj])
+    sh([sys.executable, f"{WATCH}/probe.py", a.clip, "--out", pj])
     pr = json.load(open(pj)) if os.path.exists(pj) else {}
     I = pr.get("loudness_LUFS_integrated"); TP = pr.get("true_peak_dBFS"); blk = pr.get("black_segments")
     results.append(("loudness", I is not None and -15.5 <= I <= -12.5, f"{I} LUFS (target -14 +/-1.5)"))
@@ -139,7 +141,7 @@ def main():
 
     # CAPTIONS (watch/caption_ocr.py — detects WHITE text + placement)
     cj = f"{base}_captions.json"
-    sh(["python3", f"{WATCH}/caption_ocr.py", a.clip, "--no-ocr", "--band-lo", "0.42", "--band-hi", "0.55", "--interval", "0.4", "--out", cj])
+    sh([sys.executable, f"{WATCH}/caption_ocr.py", a.clip, "--no-ocr", "--band-lo", "0.42", "--band-hi", "0.55", "--interval", "0.4", "--out", cj])
     cap = json.load(open(cj)) if os.path.exists(cj) else {}
     # Only count white in the CAPTION ZONE (~48%); white elsewhere is set dressing
     # (e.g. a guest's white name-badge/lanyard at ~85%) and must not fool the yellow check.
@@ -160,13 +162,13 @@ def main():
 
     # EYEBALL contact sheet
     cs = f"{base}_audit_contact.png"
-    sh(["python3", f"{WATCH}/contact_sheet.py", a.clip, "--n", "20", "--cols", "5", "--out", cs])
+    sh([sys.executable, f"{WATCH}/contact_sheet.py", a.clip, "--n", "20", "--cols", "5", "--out", cs])
 
     # reference reel (loudness for comparison)
     ref = next(iter(sorted(glob.glob(f"{a.ref_dir}/*.mp4"))), None)
     ref_note = ""
     if ref:
-        rj = f"{base}_ref_probe.json"; sh(["python3", f"{WATCH}/probe.py", ref, "--out", rj])
+        rj = f"{base}_ref_probe.json"; sh([sys.executable, f"{WATCH}/probe.py", ref, "--out", rj])
         if os.path.exists(rj):
             rp = json.load(open(rj)); ref_note = f"{os.path.basename(ref)} = {rp.get('loudness_LUFS_integrated')} LUFS, y? (read its frames)"
 

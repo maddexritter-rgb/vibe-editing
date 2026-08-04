@@ -102,7 +102,7 @@ def main():
     floor = measure_floor(a.src) if a.floor == "auto" else a.floor
     print(f"[cut] src {w}x{h} {srcdur:.1f}s | floor {floor} | {len(keep)} keep-span(s)")
 
-    cmd = ["python3", PRECISION_CUT, "--src", a.src, "--transcript", a.words,
+    cmd = [sys.executable, PRECISION_CUT, "--src", a.src, "--transcript", a.words,
            "--keep", json.dumps(keep), "--floor", floor, "--max-pause", a.max_pause, "--out", a.out]
     if subprocess.run(cmd).returncode or not _os.path.exists(a.out):
         sys.exit("precision_cut failed")
@@ -120,7 +120,7 @@ def main():
     else:
         nocta = a.out.rsplit(".", 1)[0] + "_nocta.mp4"
         _os.replace(a.out, nocta)
-        cmd = ["python3", CTA_SCRIPT, "--mid", nocta, "--out", a.out, "--cta", cta, "--xfade", str(a.cta_xfade)]
+        cmd = [sys.executable, CTA_SCRIPT, "--mid", nocta, "--out", a.out, "--cta", cta, "--xfade", str(a.cta_xfade)]
         if a.match_loudness:
             cmd.append("--match-loudness")
         r = subprocess.run(cmd)

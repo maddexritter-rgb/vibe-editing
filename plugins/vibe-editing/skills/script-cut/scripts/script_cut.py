@@ -45,6 +45,7 @@ KEY LESSONS BAKED IN (each was a real bug we hit):
   * true_end(): MFA labels soft endings (-ing/-s/-ve) early. Extend each cut to the word's TRUE acoustic
     end (where energy falls into the trailing silence) so tails aren't clipped and payoffs land.
 """
+import tempfile
 import sys, json, glob, os, subprocess, re, shutil, argparse
 import numpy as _np
 from num2words import num2words
@@ -64,8 +65,8 @@ PAD     = 0.04
 src     = A.source
 NAME    = A.title or os.path.splitext(os.path.basename(A.source))[0]
 os.makedirs(A.out, exist_ok=True)
-MAMBA    = os.environ.get("MFA_MAMBA", "/tmp/bin/micromamba")
-MFA_ENV  = os.environ.get("MFA_ENV", "/tmp/mfa_env")
+MAMBA    = os.environ.get("MFA_MAMBA") or os.path.join(tempfile.gettempdir(), "bin", "micromamba")
+MFA_ENV  = os.environ.get("MFA_ENV") or os.path.join(tempfile.gettempdir(), "mfa_env")
 ACOUSTIC = os.environ.get("MFA_ACOUSTIC", "english_us_arpa")
 DICT     = os.environ.get("MFA_DICT", "english_us_arpa")
 

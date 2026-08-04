@@ -69,14 +69,14 @@ def main():
         bot_9x16 = work / "bottom_9x16.mp4"
 
         # Reframe each angle. Override eye_y on the preset to bake the symmetric upper-third placement.
-        run(["python3", REFRAME, args.top,    top_9x16,
+        run([sys.executable, REFRAME, args.top,    top_9x16,
              "--preset", args.top_preset, "--eye-y", f"{args.top_eye_y}", "--res", "1080"])
-        run(["python3", REFRAME, args.bottom, bot_9x16,
+        run([sys.executable, REFRAME, args.bottom, bot_9x16,
              "--preset", args.bot_preset, "--eye-y", f"{args.bot_eye_y}", "--res", "1080"])
 
         # Stack. TOP gets cropped y=0..960 (its high face lands in upper-third of tile),
         # BOTTOM gets cropped y=960..1920 (its low face lands in upper-third of tile).
-        run(["python3", STACK,
+        run([sys.executable, STACK,
              "--speaker",  top_9x16, "--guest", bot_9x16,
              "--out",   args.out,
              "--start", f"{args.start}", "--end", f"{args.end}",

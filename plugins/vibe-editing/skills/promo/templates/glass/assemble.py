@@ -27,6 +27,7 @@ this script only handles footage + music + SFX + the stitch.
 """
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -77,7 +78,7 @@ SECTIONS = [
 
 SFX = H / "public/audio"
 W   = P / "10_WORK/build"; W.mkdir(parents=True, exist_ok=True)
-ENC = ["-c:v", "h264_videotoolbox", "-b:v", "12M", "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "48000", "-ac", "2"]
+ENC = ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "48000", "-ac", "2"]
 NCARDS = len(SECTIONS)
 
 def run(args):

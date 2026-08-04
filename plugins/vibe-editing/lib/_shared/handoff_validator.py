@@ -26,6 +26,7 @@ from __future__ import annotations
 
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -56,7 +57,7 @@ import json
 import sys
 from pathlib import Path
 
-VALID_PIPELINES = {"listicle", "qa", "single", "podcast", "multicam"}
+VALID_PIPELINES = {"listicle", "qa", "single", "single_broll", "podcast", "multicam"}
 VALID_PRESETS = {"talking-head", "stage", "split-top", "guest", "podcast"}
 VALID_RES = {1080, "1080", "4k", "4K", 2160, "2160"}
 
@@ -253,7 +254,7 @@ def validate_manifest(manifest_path: Path) -> tuple[list[str], list[str]]:
                 f"captions.context.speakers={speakers} but pipeline={pipeline!r} expects 2 — "
                 "color map will be wrong (host=white/guest=yellow won't split correctly)"
             )
-        if pipeline in {"listicle", "single"} and speakers is not None and int(speakers) != 1:
+        if pipeline in {"listicle", "single", "single_broll"} and speakers is not None and int(speakers) != 1:
             errors.append(
                 f"captions.context.speakers={speakers} but pipeline={pipeline!r} expects 1 — "
                 "single-speaker pipeline shouldn't split colors"

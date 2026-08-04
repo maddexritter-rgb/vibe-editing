@@ -13,7 +13,7 @@ Config:
 """
 from __future__ import annotations
 
-from _util import run as ff
+from _util import enc_v, run as ff
 
 VERSION = "1.1.0"  # 1.1.0: head_pad — synthesize a small silent lead when the cut has none (sf #16)
 
@@ -31,19 +31,19 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
               f"[0:a]adelay={ms}|{ms}[a]")
         ff(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", prior,
             "-filter_complex", fc, "-map", "[v]", "-map", "[a]",
-            "-c:v", "h264_videotoolbox", "-b:v", "12M", "-tag:v", "avc1", "-pix_fmt", "yuv420p",
+            *enc_v("12M", tier="delivery"),
             "-c:a", "aac", "-b:a", "192k", "-map_metadata", "-1", "-movflags", "+faststart", str(out_path)])
     elif trim <= 0:
         # No trim — just re-encode at delivery bitrate
         ff(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", prior,
-            "-c:v", "h264_videotoolbox", "-b:v", "12M", "-tag:v", "avc1", "-pix_fmt", "yuv420p",
+            *enc_v("12M", tier="delivery"),
             "-c:a", "aac", "-b:a", "192k", "-map_metadata", "-1", "-movflags", "+faststart", str(out_path)])
     else:
         fc = (f"[0:v]trim=start={trim},setpts=PTS-STARTPTS[v];"
               f"[0:a]atrim=start={trim},asetpts=PTS-STARTPTS[a]")
         ff(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", prior,
             "-filter_complex", fc, "-map", "[v]", "-map", "[a]",
-            "-c:v", "h264_videotoolbox", "-b:v", "12M", "-tag:v", "avc1", "-pix_fmt", "yuv420p",
+            *enc_v("12M", tier="delivery"),
             "-c:a", "aac", "-b:a", "192k", "-map_metadata", "-1", "-movflags", "+faststart", str(out_path)])
 
     return {"out": str(out_path), "meta": {"head_trim": trim}}

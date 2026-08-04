@@ -31,6 +31,7 @@ Usage:
 """
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -392,7 +393,7 @@ def main():
                     tmp = f"{MCACHE}/{tag}_{_key}_4k.mp4"
                     run([FF, "-y", "-loglevel", "error", "-ss", f"{r0-off:.3f}", "-i", cam, "-t", f"{r1-r0:.3f}", "-an",
                          *encoder_args(3840, 2160, FF, tier="intermediate"), "-r", FPS, tmp])
-                    _rcmd = ["python3", REFRAME, tmp, mp, "--res", ("4k" if OW >= 2160 else "1080"), "--zoom", str(zoom),
+                    _rcmd = [sys.executable, REFRAME, tmp, mp, "--res", ("4k" if OW >= 2160 else "1080"), "--zoom", str(zoom),
                          "--eye-y", str(eye), "--xcenter", "box", "--roi", *roi.split()]
                     if lock_y: _rcmd.insert(_rcmd.index("--xcenter"), "--lock-y")
                     rr = subprocess.run(_rcmd, capture_output=True, text=True)
@@ -442,10 +443,10 @@ def main():
             # Single-pass reframe with cut-frames at seams
             if panel_mode:
                 # DYNAMIC target-framing guest panel (2026-06-17): output is the PANEL (OW x OH//2).
-                cmd = ["python3", GUEST_PANEL, concat_in, mp, "--target-face-h", str(tfh), "--target-face-y", str(tfy),
+                cmd = [sys.executable, GUEST_PANEL, concat_in, mp, "--target-face-h", str(tfh), "--target-face-y", str(tfy),
                        "--roi", roi, "--panel-w", str(OW), "--panel-h", str(OH // 2), "--fps", FPS]
             else:
-                cmd = ["python3", REFRAME, concat_in, mp, "--res", ("4k" if OW >= 2160 else "1080"),
+                cmd = [sys.executable, REFRAME, concat_in, mp, "--res", ("4k" if OW >= 2160 else "1080"),
                        "--zoom", str(zoom), "--eye-y", str(eye), "--xcenter", "box", "--roi", *roi.split()]
                 if lock_y: cmd.insert(cmd.index("--xcenter"), "--lock-y")
             if cut_frames:
@@ -680,7 +681,7 @@ def main():
 
     # ---------- CAPTIONS: transcribe -> [corrections] -> lowercase -> money -> EDL-driven director -> spice -> HW burn ----------
     print("  [captions] transcribe + spice ...", flush=True)
-    run(["python3", TRANSCRIBE, base, "--start", "0", "--end", f"{dur_of(base):.2f}", "--out", f"{work}/w_raw.json"])
+    run([sys.executable, TRANSCRIBE, base, "--start", "0", "--end", f"{dur_of(base):.2f}", "--out", f"{work}/w_raw.json"])
     # CORRECTIONS (2026-06-15): apply per-clip word/phrase fixes for Whisper mishearings on the
     # rendered audio. Mirrors spice_caption.py's --corrections logic (phrase pass first, then
     # single-token, case-insensitive on the bare word, punctuation preserved). Use this when the
@@ -728,8 +729,8 @@ def main():
         wj["words"] = words
         json.dump(wj, open(f"{work}/w_raw.json", "w"))
         print(f"  [captions] corrections applied: {n_fixed} word/phrase fix(es) from {a.corrections}", flush=True)
-    run(["python3", NORMALIZE, f"{work}/w_raw.json", f"{work}/w_norm.json"])     # lowercase (guide rule)
-    run(["python3", SPICE_NORM, f"{work}/w_norm.json", f"{work}/w_spice.json"])  # $ / % / unit tokens
+    run([sys.executable, NORMALIZE, f"{work}/w_raw.json", f"{work}/w_norm.json"])     # lowercase (guide rule)
+    run([sys.executable, SPICE_NORM, f"{work}/w_norm.json", f"{work}/w_spice.json"])  # $ / % / unit tokens
     # Auto-trim leading/trailing FILLER captions (don't show a stray "so/and/yeah" at the very start/end — the audio
     # still plays; this is a caption-only trim). Conservative discourse-marker set; never touches the middle or "I".
     _spice = json.load(open(f"{work}/w_spice.json")); words = _spice["words"]
@@ -767,7 +768,7 @@ def main():
         edl_guest, _ = resolve_speakers(words, segdur, segs, speaker_at, spk_mic, cam_dir, FF,
                                         debug=bool(os.environ.get("VIBE_DIAR_DEBUG")))
     director = {}
-    _dr = subprocess.run(["python3", f"{CAPS}/scripts/caption_director.py", f"{work}/w_spice.json",
+    _dr = subprocess.run([sys.executable, f"{CAPS}/scripts/caption_director.py", f"{work}/w_spice.json",
                           "--out", f"{work}/director_llm.json", "--context", "q&a workshop"],
                          capture_output=True, text=True)
     if _dr.returncode == 0 and os.path.exists(f"{work}/director_llm.json"):
@@ -788,7 +789,7 @@ def main():
     # Falls back to the preset's static 50% if the analyzer is unavailable.
     cc_layout = None
     if os.path.exists(LAYOUT_ANALYZE):
-        _la = subprocess.run(["python3", LAYOUT_ANALYZE, base, f"{work}/cc_layout.json",
+        _la = subprocess.run([sys.executable, LAYOUT_ANALYZE, base, f"{work}/cc_layout.json",
                               "--sample-every", "2", "--detect-width", "800"],
                              capture_output=True, text=True)
         if _la.returncode == 0 and os.path.exists(f"{work}/cc_layout.json"):
@@ -801,7 +802,7 @@ def main():
     # inline single-layer ASS shadow (\bord\blur in cc.ass) the old subtitles= burn used.
     # caption-clips is the SSOT for the shadow — delegate the burn to generate_spice --burn.
     cc_burned = f"{work}/cc_burned.mp4"
-    gen_cmd = ["python3", GEN_SPICE, f"{work}/w_spice.json", "--preset", a.preset,
+    gen_cmd = [sys.executable, GEN_SPICE, f"{work}/w_spice.json", "--preset", a.preset,
                "--style", f"{work}/director.json", "--out", f"{work}/cc.ass",
                "--burn", base, "--burn-out", cc_burned]
     if cc_layout:
@@ -809,7 +810,7 @@ def main():
     run(gen_cmd)
     _lint = f"{CAPS}/scripts/caption_lint.py"   # self-audit gate (advisory): enforce locked rules pre-burn
     if os.path.exists(_lint):
-        subprocess.run(["python3", _lint, f"{work}/cc.ass"])
+        subprocess.run([sys.executable, _lint, f"{work}/cc.ass"])
     if not os.path.exists(cc_burned):
         sys.exit(f"caption burn failed — {cc_burned} missing")
     # Finishing pass on the gblur-shadowed burn (sync-safe — captions are already baked in, so a

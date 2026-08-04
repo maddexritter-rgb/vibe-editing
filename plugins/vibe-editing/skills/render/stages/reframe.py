@@ -47,9 +47,11 @@ Config (manifest.stages.reframe):
     }
 """
 from __future__ import annotations
+import sys
 
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -81,7 +83,7 @@ import hashlib
 import re
 from pathlib import Path
 
-from _util import run as ff, resolve_path
+from _util import enc_v, run as ff, resolve_path
 
 QA_REFRAME = _acq("horizontal-to-vertical/scripts/qa_reframe_v2.py")
 MAKE_SPLIT = _acq("horizontal-to-vertical/scripts/make_splitscreen.py")
@@ -167,7 +169,7 @@ def _count_frames(p) -> int:
     out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_frames",
                           "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", str(p)],
                          capture_output=True, text=True, check=True)
-    return int(out.stdout.strip())
+    return int(out.stdout.strip().splitlines()[0].strip().strip(","))  # ffprobe csv can trail a comma
 
 
 def _assert_frames(p, expected: int, what: str):
@@ -179,7 +181,7 @@ def _assert_frames(p, expected: int, what: str):
 
 def _tile_cmd(chunk, out, side_cfg, res, detw):
     """qa_reframe_v2 invocation for one split tile (ROI-restricted to one subject)."""
-    cmd = ["python3", str(QA_REFRAME), str(chunk), str(out),
+    cmd = [sys.executable, str(QA_REFRAME), str(chunk), str(out),
            "--preset", side_cfg.get("preset", "guest"), "--res", res,
            "--no-scene-split", "--lock-x", "--detw", str(detw)]
     if side_cfg.get("roi"):
@@ -253,7 +255,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
                 ff(_tile_cmd(chunk, top, split.get("top") or {}, res, detw))
                 ff(_tile_cmd(chunk, bot, split.get("bottom") or {}, res, detw))
                 seg_clip = work_dir / f"{out_path.stem}_seg{i}_section.mp4"
-                ff(["python3", str(MAKE_SPLIT), "--speaker", str(top), "--guest", str(bot),
+                ff([sys.executable, str(MAKE_SPLIT), "--speaker", str(top), "--guest", str(bot),
                     "--out", str(seg_clip), "--audio", "none", "--width", str(width),
                     "--crop-y", str(crop_y), "--guest-crop-y", str(crop_y),
                     "--shadow-strength", str(shadow)])
@@ -280,7 +282,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
                 # override scene_split:false ONLY for a known single-angle chunk with a fixed ROI
                 # (e.g. a wide multi-person shot cropped to one subject) where a continuous crop is wanted.
                 scene = "--no-scene-split" if ov.get("scene_split") is False else "--scene-split"
-                scmd = ["python3", str(QA_REFRAME), str(chunk), str(seg_clip),
+                scmd = [sys.executable, str(QA_REFRAME), str(chunk), str(seg_clip),
                         "--preset", s_preset, "--res", res, scene]
                 if s_zoom is not None: scmd += ["--zoom", str(s_zoom)]
                 if s_eye is not None: scmd += ["--eye-y", str(s_eye)]
@@ -300,7 +302,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
         aud_idx = len(seg_clips)
         ff(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", *fc_inputs,
             "-filter_complex", fc, "-map", "[v]", "-map", f"{aud_idx}:a?",
-            "-c:v", "h264_videotoolbox", "-b:v", "20M", "-tag:v", "avc1", "-pix_fmt", "yuv420p",
+            *enc_v("20M"),
             "-c:a", "copy", "-movflags", "+faststart", str(out_path)])
         _assert_frames(out_path, total_f, "per-segment assembly")
         return {"out": str(out_path), "meta": {
@@ -312,7 +314,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
 
     full_out = out_path.parent / (out_path.stem + "_fullpass.mp4") if split_idxs else out_path
 
-    cmd = ["python3", str(QA_REFRAME), str(cut_out), str(full_out),
+    cmd = [sys.executable, str(QA_REFRAME), str(cut_out), str(full_out),
            "--preset", preset, "--res", res]
     if zoom is not None: cmd += ["--zoom", str(zoom)]
     if eye_y is not None: cmd += ["--eye-y", str(eye_y)]
@@ -418,7 +420,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
             # vertical slices to center each in its square.)
             top_cy = int(top_cfg.get("crop_y", crop_y))
             bot_cy = int(bot_cfg.get("crop_y", crop_y))
-            ff(["python3", str(MAKE_SPLIT), "--speaker", str(top), "--guest", str(bot),
+            ff([sys.executable, str(MAKE_SPLIT), "--speaker", str(top), "--guest", str(bot),
                 "--out", str(section), "--audio", "none", "--width", str(width),
                 "--crop-y", str(top_cy), "--guest-crop-y", str(bot_cy),
                 "--shadow-strength", str(shadow)])
@@ -448,7 +450,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
         fc = ";".join(parts) + f";{''.join(labels)}concat=n={len(labels)}:v=1:a=0[v]"
         ff(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
             *fc_inputs, "-filter_complex", fc, "-map", "[v]", "-map", "0:a?",
-            "-c:v", "h264_videotoolbox", "-b:v", "20M", "-tag:v", "avc1", "-pix_fmt", "yuv420p",
+            *enc_v("20M"),
             "-c:a", "copy", "-movflags", "+faststart", str(out_path)])
         _assert_frames(out_path, total_f, "split assembly")
 

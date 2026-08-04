@@ -5,6 +5,7 @@ transcript near near_t0, then multicut + multifinish → 20_DELIVER. Editorial p
 so the boundaries are exactly the strong hook and the clean payoff (the method that nailed CleanYourSocials)."""
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -62,8 +63,8 @@ if s is None or e is None or e <= s:
 tt = title[0].upper() + title[1:]
 cut = HERE / f"renders/cut_{title}.mp4"; out = DELIVER / f"client_DTC_POD_{tt}_Operator_20260606_V1.mp4"
 print(f"{title}: [{s:.2f} → {e:.2f}] {e-s:.0f}s", flush=True)
-subprocess.run(["python3", str(HERE/"multicut.py"), ep, f"{s}", f"{e}", str(cut), "switch"], capture_output=True, text=True)
-r = subprocess.run(["python3", str(HERE/"multifinish.py"), ep, f"{s}", f"{e}", str(cut), str(out), "--music", str(CAL/music)], capture_output=True, text=True)
+subprocess.run([sys.executable, str(HERE/"multicut.py"), ep, f"{s}", f"{e}", str(cut), "switch"], capture_output=True, text=True)
+r = subprocess.run([sys.executable, str(HERE/"multifinish.py"), ep, f"{s}", f"{e}", str(cut), str(out), "--music", str(CAL/music)], capture_output=True, text=True)
 print("  " + ((r.stdout.strip().splitlines() or [""])[-1][-110:]))
 import json as _j
 w = _j.load(open(HERE/f"capwork/cut_{title}_norm.json"))["words"]

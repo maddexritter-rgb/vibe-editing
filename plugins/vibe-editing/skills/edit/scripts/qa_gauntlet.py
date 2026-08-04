@@ -67,7 +67,7 @@ def main():
     if tr and Path(tr).exists():
         with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as tf:
             tf.write(transcript_text(tr)); txt = tf.name
-        results.append(run("editorial", ["python3", str(EDIT / "qa_editorial_score.py"), "--text", open(txt).read()]))
+        results.append(run("editorial", [sys.executable, str(EDIT / "qa_editorial_score.py"), "--text", open(txt).read()]))
         os.unlink(txt)
     else:
         results.append(("editorial", "SKIP", "no transcript (pass --transcript or --project)"))
@@ -75,36 +75,36 @@ def main():
     # 2. PREBUILD (G1-G8) — needs edl.json
     edl = Path(a.project) / "edl.json" if a.project else None
     if edl and edl.exists():
-        results.append(run("prebuild(G1-G8)", ["python3", str(EDIT / "qa_prebuild_audit.py"), a.project]))
+        results.append(run("prebuild(G1-G8)", [sys.executable, str(EDIT / "qa_prebuild_audit.py"), a.project]))
     else:
         results.append(("prebuild(G1-G8)", "SKIP", f"no edl.json at {edl}"))
 
     # 3. FRAMING
-    fcmd = ["python3", str(EDIT / "framing_gate.py"), "--clip", a.clip]
+    fcmd = [sys.executable, str(EDIT / "framing_gate.py"), "--clip", a.clip]
     if a.single_cam_span:
         s, e = a.single_cam_span.split()
         fcmd += ["--start", s, "--end", e]
     results.append(run("framing", fcmd))
 
     # 3b. DISFLUENCY (ACOUSTIC um/ah + long pause) — catches what the transcript hides (ASR drops ums + swallows pauses)
-    dcmd = ["python3", str(EDIT / "disfluency_gate.py"), "--clip", a.clip]
+    dcmd = [sys.executable, str(EDIT / "disfluency_gate.py"), "--clip", a.clip]
     if tr and Path(tr).exists(): dcmd += ["--words", tr]
     results.append(run("disfluency", dcmd))
 
     # 3c. CAPTION-SYNC — do the burned captions match the delivered audio? (catches the 'different'/'right' desync)
     if a.cc and Path(a.cc).exists():
-        results.append(run("caption-sync", ["python3", str(EDIT / "caption_sync_gate.py"), "--cc", a.cc, "--clip", a.clip, "--max-mismatch", "2"]))
+        results.append(run("caption-sync", [sys.executable, str(EDIT / "caption_sync_gate.py"), "--cc", a.cc, "--clip", a.clip, "--max-mismatch", "2"]))
     else:
         results.append(("caption-sync", "SKIP", "no --cc (burned caption .ass) given"))
 
     # 4. REQC
-    rcmd = ["python3", str(EDIT / "reqc.py"), a.clip]
+    rcmd = [sys.executable, str(EDIT / "reqc.py"), a.clip]
     if a.project: rcmd += ["--project", a.project]
     results.append(run("reqc", rcmd))
 
     # 5. REVISION_VERIFY (revision mode)
     if a.prior and a.spec:
-        results.append(run("revision_verify", ["python3", str(SHARED / "revision_verify.py"),
+        results.append(run("revision_verify", [sys.executable, str(SHARED / "revision_verify.py"),
                                                 "--prior", a.prior, "--new", tr or a.clip, "--spec", a.spec]))
     else:
         results.append(("revision_verify", "SKIP", "not a revision (pass --prior + --spec)"))

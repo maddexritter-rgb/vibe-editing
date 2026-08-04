@@ -97,10 +97,16 @@ def main():
     canvas = Image.new("RGB", (canvas_w, canvas_h), (15, 15, 18))
     draw = ImageDraw.Draw(canvas)
 
-    try:
-        font_title = ImageFont.truetype("/System/Library/Fonts/HelveticaNeue.ttc", 30)
-        font_label = ImageFont.truetype("/System/Library/Fonts/HelveticaNeue.ttc", 22)
-    except IOError:
+    font_title = font_label = None
+    for _fp in (r"C:\Windows\Fonts\segoeui.ttf", r"C:\Windows\Fonts\arial.ttf",
+                "/System/Library/Fonts/HelveticaNeue.ttc"):
+        try:
+            font_title = ImageFont.truetype(_fp, 30)
+            font_label = ImageFont.truetype(_fp, 22)
+            break
+        except IOError:
+            continue
+    if font_title is None:
         font_title = font_label = ImageFont.load_default()
 
     title = a.title or f"{a.delivery_dir.parent.parent.name} — {n} clips   (Q_ = Q&A · H_ = highlight)"

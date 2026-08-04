@@ -1,0 +1,10 @@
+{
+  "name": "single_broll",
+  "description": "Single-cam monologue talking-head short WITH optional b-roll cutaways. Identical to 'single' plus a 'broll' stage between grade and captions, so captions burn LAST over the b-roll (CLIP_CUTTING_PLAYBOOK b-roll rules). With no stages.broll.items configured the broll stage is a passthrough.",
+  "stages": ["cut", "reframe", "grade", "broll", "captions", "mix", "leadfix"],
+  "notes": {
+    "reframe.preset": "talking-head (desk) or stage (stage cam / walking subject)",
+    "broll": "opt-in, less is more: 1-2 cutaways of ~2s; video only; centered; hard cuts, no transitions/SFX; never over the hook or the payoff",
+    "captions": "Plain spice style — burns over the b-roll."
+  }
+}

@@ -17,6 +17,7 @@ Boundaries JSON schema (input/output):
     { "clips": [ {"index": 0, "start": float, "end": float}, ... ] }
 """
 from __future__ import annotations
+import tempfile
 import argparse, json, subprocess, sys
 from pathlib import Path
 from PIL import Image
@@ -26,7 +27,7 @@ def find_last_bright_frame(source: str, scan_start: float, scan_end: float,
                             fps: int = 60, threshold: float = 20.0) -> int | None:
     """Decode [scan_start, scan_end] at `fps` and return idx of last frame with
     mean luma > threshold. None if all frames are dark."""
-    work = Path('/tmp/_tighten_scan')
+    work = Path(tempfile.gettempdir()) / '_tighten_scan'
     work.mkdir(exist_ok=True)
     for f in work.glob('*.jpg'):
         f.unlink()
@@ -48,7 +49,7 @@ def find_last_bright_frame(source: str, scan_start: float, scan_end: float,
 
 def find_first_bright_frame(source: str, scan_start: float, scan_end: float,
                              fps: int = 60, threshold: float = 20.0) -> int | None:
-    work = Path('/tmp/_tighten_scan')
+    work = Path(tempfile.gettempdir()) / '_tighten_scan'
     work.mkdir(exist_ok=True)
     for f in work.glob('*.jpg'):
         f.unlink()

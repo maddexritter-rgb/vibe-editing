@@ -23,7 +23,9 @@ Usage:
 Writes intermediate files to /tmp/_acq_bench/ (cleaned up at end).
 """
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
+import tempfile
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -61,7 +63,7 @@ from pathlib import Path
 sys.path.insert(0, VIBE_SHARED)
 from fast_encode import encoder_args
 
-WORK = Path("/tmp/_acq_bench")
+WORK = Path(tempfile.gettempdir()) / "_acq_bench"
 
 
 def _ffmpeg():
@@ -155,7 +157,7 @@ def main():
         for tier in ("delivery",):
             enc = encoder_args(w, h, ffmpeg, tier=tier)
             for use_hwaccel in (False, True):
-                hw_prefix = ["-hwaccel", "videotoolbox"] if use_hwaccel else []
+                hw_prefix = ["-hwaccel", "auto"] if use_hwaccel else []
                 tag = "encode+HW-decode" if use_hwaccel else "encode+SW-decode (control)"
                 out = WORK / f"out_{label.split()[0]}_hw{int(use_hwaccel)}.mp4"
                 cmd = [ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
@@ -172,7 +174,7 @@ def main():
     src4k = sources["4K (3840x2160)"][0]
     enc_1080 = encoder_args(1080, 1920, ffmpeg, tier="intermediate")
     for use_hwaccel in (False, True):
-        hw_prefix = ["-hwaccel", "videotoolbox"] if use_hwaccel else []
+        hw_prefix = ["-hwaccel", "auto"] if use_hwaccel else []
         tag = "4K→1080p+HW-decode" if use_hwaccel else "4K→1080p+SW-decode"
         out = WORK / f"out_scale_hw{int(use_hwaccel)}.mp4"
         cmd = [ffmpeg, "-y", "-hide_banner", "-loglevel", "error",

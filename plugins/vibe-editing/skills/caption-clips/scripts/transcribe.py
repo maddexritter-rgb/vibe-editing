@@ -19,8 +19,13 @@ except ImportError:
     sys.exit(2)
 
 
-def transcribe_full(video: Path, model_size: str, device: str, compute_type: str):
-    model = WhisperModel(model_size, device=device, compute_type=compute_type)
+def transcribe_full(video: Path, model_size: str, device: str, compute_type: str,
+                    cpu_threads: int | None = None):
+    import os
+    if cpu_threads is None:
+        cpu_threads = max(1, (os.cpu_count() or 8) // 2)
+    model = WhisperModel(model_size, device=device, compute_type=compute_type,
+                         cpu_threads=cpu_threads)
     segments, info = model.transcribe(
         str(video),
         word_timestamps=True,
@@ -72,6 +77,8 @@ def main() -> int:
                     help="Device: auto, cpu, cuda")
     ap.add_argument("--compute-type", default="auto",
                     help="Compute type: auto, int8, float16, float32")
+    ap.add_argument("--threads", type=int, default=None,
+                    help="CPU threads for faster-whisper (default: physical core estimate)")
     args = ap.parse_args()
 
     if not args.input.exists():
@@ -98,8 +105,8 @@ def main() -> int:
     if compute_type == "auto":
         compute_type = "float16" if device == "cuda" else "int8"
 
-    print(f"Loading {args.model} on {device} ({compute_type})…")
-    words, info = transcribe_full(args.input, args.model, device, compute_type)
+    print(f"Loading {args.model} on {device} ({compute_type}, {args.threads} threads)…")
+    words, info = transcribe_full(args.input, args.model, device, compute_type, args.threads)
     print(f"Transcribed {len(words)} words ({info.language}, {info.duration:.1f}s).")
 
     args.out.mkdir(parents=True, exist_ok=True)

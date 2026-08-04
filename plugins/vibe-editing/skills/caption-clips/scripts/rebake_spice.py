@@ -152,7 +152,7 @@ def main() -> int:
                               "-of", "default=nokey=1:noprint_wrappers=1", str(a.video)],
                              capture_output=True, text=True).stdout.strip()
         end = float(dur) if dur else 0.0
-    cmd = ["python3", str(SC / "burn_captions.py"), str(a.video), str(patched),
+    cmd = [sys.executable, str(SC / "burn_captions.py"), str(a.video), str(patched),
            "--start", str(a.start), "--end", str(end), "--out", str(a.out)]
     print(f"burning: {' '.join(cmd)}")
     r = subprocess.run(cmd)

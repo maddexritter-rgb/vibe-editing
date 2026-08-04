@@ -10,3 +10,6 @@ out/
 __pycache__/
 *.pyc
 .DS_Store
+
+# API keys — never commit
+plugins/vibe-editing/config/keys.env

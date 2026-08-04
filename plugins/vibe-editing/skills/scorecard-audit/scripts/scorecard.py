@@ -231,7 +231,7 @@ def autolog_failures_as_lessons(card: dict, client: str, clip_slug: str,
             continue
         try:
             subprocess.run(
-                ["python3", str(TRACKER), "lesson", clip_slug,
+                [sys.executable, str(TRACKER), "lesson", clip_slug,
                  "--client", client,
                  "--issue", issue,
                  "--when", when_clause,

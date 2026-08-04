@@ -46,6 +46,7 @@ def _acq_load_keys():
 _acq_load_keys()
 # ── end keys ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -214,8 +215,10 @@ def qc_one(mp4: Path, key: str, project=None) -> dict:
     v = next((s for s in streams if s["codec_type"]=="video"), {})
     a = next((s for s in streams if s["codec_type"]=="audio"), None)
     extra = [s for s in streams if s["codec_type"] not in ("video","audio")]
-    if (v.get("width"), v.get("height")) != (2160, 3840):
-        issues.append(f"RES {v.get('width')}x{v.get('height')} (want 2160x3840)")
+    # 9:16 verticals ship at 4K OR 1080 — 1080 is the correct call when the manifest's
+    # reframe res is 1080 (e.g. extreme-wide source where a 4K output would be upscale mush).
+    if (v.get("width"), v.get("height")) not in ((2160, 3840), (1080, 1920)):
+        issues.append(f"RES {v.get('width')}x{v.get('height')} (want 2160x3840 or 1080x1920)")
     if extra:
         issues.append(f"{len(extra)} stray non-AV stream(s)")
     if a is None:

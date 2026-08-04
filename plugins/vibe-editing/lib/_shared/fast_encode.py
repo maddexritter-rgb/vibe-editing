@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Brand FAST-RENDER STANDARD — single source of truth for video encoder args (locked 2026-06-05).
 
-Apple Silicon has dedicated hardware video encoders (VideoToolbox). On Operator's M3 Max,
-`h264_videotoolbox` benchmarked ~4x faster than `libx264 -crf12 -preset slow` at 4K
-(13.1s -> 3.0s for 8s of 2160x3840) at comparable file size — and it runs on the media
-engine instead of pinning the CPU, which also frees cores for parallelism. USE IT for every
-delivery / intermediate / proxy render. Reserve libx264 ONLY for a final archival master
-where max quality-per-bit matters (tier='master').
+WINDOWS PORT (2026-08-03): this machine is an AMD Ryzen AI 9 HX PRO 375 + Radeon 890M, so the
+hardware encoder is AMD AMF (`h264_amf`), not Apple VideoToolbox. Same policy as the original:
+hardware encode for every delivery / intermediate / proxy render (off-CPU, keeps cores free for
+parallelism); reserve libx264 ONLY for tier='master' — the final archival render — where max
+quality-per-bit matters. The probe below picks whichever hardware encoder this ffmpeg actually
+has (h264_amf on this box; h264_videotoolbox if the kit ever runs on a Mac again).
 
 Any video skill should call encoder_args() instead of hand-writing '-c:v libx264 ...':
 
@@ -16,11 +16,13 @@ Any video skill should call encoder_args() instead of hand-writing '-c:v libx264
 
 Env overrides (flip behaviour without code edits):
     VIBE_ENCODER=x264   force software libx264 everywhere
-    VIBE_ENCODER=vt     force VideoToolbox everywhere (even master)
+    VIBE_ENCODER=hw     force the hardware encoder everywhere (even master)
+    VIBE_ENCODER=vt     legacy alias for hw
     VIBE_FAST=0         alias for VIBE_ENCODER=x264
 """
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -52,13 +54,30 @@ from functools import lru_cache
 
 
 @lru_cache(maxsize=8)
-def _has_vt(ffmpeg: str) -> bool:
+def _hw_encoder(ffmpeg: str) -> str | None:
+    """Name of the available H.264 hardware encoder, or None. AMD AMF first (this machine),
+    then Apple VideoToolbox (original Mac kit)."""
     try:
         out = subprocess.run([ffmpeg, "-hide_banner", "-encoders"],
                              capture_output=True, text=True, timeout=15).stdout
-        return "h264_videotoolbox" in out
+        for enc in ("h264_amf", "h264_videotoolbox"):
+            if enc in out:
+                return enc
+        return None
     except Exception:
-        return False
+        return None
+
+
+def hw_h264_args(bitrate: str = "16M", ffmpeg: str = "ffmpeg"):
+    """Hardware H.264 encoder args at a fixed bitrate; libx264 fallback. For callers that
+    hand-build ffmpeg commands (faded_trim_cut, testimonial_reframe)."""
+    enc = _hw_encoder(ffmpeg)
+    if enc == "h264_amf":
+        return ["-c:v", "h264_amf", "-quality", "quality", "-rc", "vbr_peak",
+                "-b:v", bitrate, "-pix_fmt", "yuv420p"]
+    if enc:
+        return ["-c:v", enc, "-b:v", bitrate, "-pix_fmt", "yuv420p"]
+    return ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p"]
 
 
 def _bitrate_for(width: int, height: int) -> str:
@@ -108,16 +127,22 @@ def encoder_args_for(input_path: str, ffmpeg: str = "ffmpeg", *, tier="delivery"
 def encoder_args(width, height, ffmpeg, *, tier="delivery", crf=18, bitrate=None):
     """ffmpeg video-codec args for an output.
 
-    tier: 'delivery' | 'intermediate' | 'proxy'  -> VideoToolbox (hardware, ~4x faster)
-          'master'                                -> libx264 (slow, max quality-per-bit)
-    Honors VIBE_ENCODER / VIBE_FAST env overrides; falls back to libx264 if VideoToolbox absent.
+    tier: 'proxy' | 'intermediate'  -> hardware encoder (h264_amf on this machine, off-CPU)
+          'delivery' | 'master'     -> libx264 (the shipped clip: max quality-per-bit)
+    Windows-port policy: AMF is great for speed but libx264 wins on quality, so anything the
+    viewer actually receives ('delivery'/'master') is software-encoded.
+    Honors VIBE_ENCODER / VIBE_FAST env overrides; falls back to libx264 if no HW encoder.
     """
     force = os.environ.get("VIBE_ENCODER", "").lower()
     if os.environ.get("VIBE_FAST") == "0":
         force = "x264"
-    want_vt = (force == "vt") or (tier != "master" and force != "x264")
-    if want_vt and _has_vt(ffmpeg):
+    want_hw = (force in ("hw", "vt", "amf")) or (tier in ("proxy", "intermediate") and force != "x264")
+    enc = _hw_encoder(ffmpeg) if want_hw else None
+    if enc:
         br = bitrate or _bitrate_for(width, height)
-        return ["-c:v", "h264_videotoolbox", "-b:v", br, "-tag:v", "avc1", "-pix_fmt", "yuv420p"]
+        args = ["-c:v", enc]
+        if enc == "h264_amf":
+            args += ["-quality", "quality", "-rc", "vbr_peak"]
+        return args + ["-b:v", br, "-tag:v", "avc1", "-pix_fmt", "yuv420p"]
     preset = "slow" if tier == "master" else "medium"
     return ["-c:v", "libx264", "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p"]
