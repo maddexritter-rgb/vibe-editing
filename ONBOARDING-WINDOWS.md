@@ -23,10 +23,12 @@ You're setting up the "Vibe Editing" video kit for me on Windows 11, NATIVE (no 
 Homebrew, no bash). I am NOT technical — do everything yourself, explain each step in plain
 English, keep a visible to-do list, and never make me use a terminal.
 
-1) GET THE KIT
+1) GET THE KIT (the Windows-fixed copy)
    Install git via winget if missing (Git.Git), then:
-   git clone https://github.com/maddexritter-rgb/vibe-editing.git
+   git clone -b windows-port https://github.com/BradyPlante/vibe-editing.git
    into my Documents folder. Work inside that folder from then on.
+   (This fork has all the Windows fixes from step 5 ALREADY APPLIED — treat step 5 as a
+   verification checklist, not work to do. Original kit: maddexritter-rgb/vibe-editing.)
 
 2) READ BEFORE INSTALLING
    Read README.md, INSTALL.md, CLAUDE.md, and plugins/vibe-editing/doctor.py.
@@ -56,7 +58,8 @@ English, keep a visible to-do list, and never make me use a terminal.
    Transcription: faster-whisper on CPU with compute_type=int8 and cpu_threads = my
    physical core count. (If I have an NVIDIA GPU, use device=cuda + float16 instead.)
 
-5) KNOWN WINDOWS FIXES (all real crashes from the first Windows port — apply proactively)
+5) KNOWN WINDOWS FIXES (ALREADY APPLIED in this fork — spot-check rather than redo; apply
+   manually only if I cloned the original Mac repo instead)
    a. Subprocess calls use 'python3' (~72 spots, 19 files) → replace with sys.executable.
    b. Hardcoded /tmp/ paths (8 files) → tempfile.gettempdir().
    c. The "portable path bootstrap" block pasted into ~42 .py files uses _pl.Path but never
