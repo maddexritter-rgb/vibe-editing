@@ -18,6 +18,7 @@ from __future__ import annotations
 
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -46,7 +47,7 @@ if VIBE_SHARED not in _sys.path:
 import json
 from pathlib import Path
 
-from _util import run as ff, resolve_path, ffprobe_fps
+from _util import enc_v, run as ff, resolve_path, ffprobe_fps
 
 import os as _os, sys as _sys
 try:
@@ -113,7 +114,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
             "-ss", f"{in_t:.3f}", "-i", str(seg_a),
             "-t", f"{dur:.3f}",
             "-map", "0:v", "-map", "1:a",
-            "-c:v", "h264_videotoolbox", "-b:v", "25M", "-tag:v", "avc1", "-pix_fmt", "yuv420p",
+            *enc_v("25M"),
             "-c:a", "aac", "-b:a", "192k",
             "-af", fade,
             "-movflags", "+faststart", str(seg)])
@@ -129,7 +130,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
     fc = "".join(fc_streams) + f"concat=n={len(seg_files)}:v=1:a=1[v][a]"
     ff(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
         *fc_inputs, "-filter_complex", fc, "-map", "[v]", "-map", "[a]",
-        "-c:v", "h264_videotoolbox", "-b:v", "20M", "-tag:v", "avc1", "-pix_fmt", "yuv420p",
+        *enc_v("20M"),
         "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(out_path)])
 
     fps = ffprobe_fps(out_path)
@@ -144,7 +145,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
         out = _sp.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_frames",
                        "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", str(f)],
                       capture_output=True, text=True, check=True)
-        n = int(out.stdout.strip())
+        n = int(out.stdout.strip().splitlines()[0].strip().strip(","))  # ffprobe csv can trail a comma
         boundaries.append({"in_frame": cum_f, "out_frame": cum_f + n, "duration_s": d})
         cum_f += n
 

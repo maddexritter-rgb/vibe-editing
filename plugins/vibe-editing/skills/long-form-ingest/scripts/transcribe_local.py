@@ -40,6 +40,11 @@ def main() -> int:
                     help="faster-whisper model size (small|medium|large-v3|...). Env: VIBE_WHISPER_MODEL")
     ap.add_argument("--device", default=os.environ.get("VIBE_WHISPER_DEVICE", "cpu"))
     ap.add_argument("--compute-type", default=os.environ.get("VIBE_WHISPER_COMPUTE", "int8"))
+    ap.add_argument("--threads", type=int,
+                    default=int(os.environ.get("VIBE_WHISPER_THREADS",
+                                               str(max(1, (os.cpu_count() or 8) // 2)))),
+                    help="CPU threads for faster-whisper (default: physical core estimate; "
+                         "env: VIBE_WHISPER_THREADS)")
     a = ap.parse_args()
 
     try:
@@ -55,7 +60,8 @@ def main() -> int:
 
     print(f"[transcribe_local] model={a.model} device={a.device} → transcribing"
           f"{' segment' if seg else ''}…", file=sys.stderr)
-    model = WhisperModel(a.model, device=a.device, compute_type=a.compute_type)
+    model = WhisperModel(a.model, device=a.device, compute_type=a.compute_type,
+                         cpu_threads=a.threads)
     segments, info = model.transcribe(
         src, word_timestamps=True, vad_filter=True,
         vad_parameters={"min_silence_duration_ms": 300},

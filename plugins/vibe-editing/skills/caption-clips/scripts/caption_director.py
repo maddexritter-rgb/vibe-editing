@@ -27,6 +27,7 @@ def _acq_load_keys():
 _acq_load_keys()
 # ── end keys ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -300,8 +301,13 @@ def main():
     # LLM path (Anthropic) for full semantic styling; on ANY failure (no key, credits, bad
     # response) fall back to the DETERMINISTIC emphasis stream so /edit one-shots regardless.
     stream = None
-    ak = (os.environ.get("ANTHROPIC_API_KEY")
-          or subprocess.run(["zsh", "-ic", 'printf %s "$ANTHROPIC_API_KEY"'], capture_output=True, text=True).stdout.strip())
+    ak = os.environ.get("ANTHROPIC_API_KEY")
+    if not ak and os.name != "nt":  # zsh login-shell lookup is macOS/Linux only
+        try:
+            ak = subprocess.run(["zsh", "-ic", 'printf %s "$ANTHROPIC_API_KEY"'],
+                                capture_output=True, text=True).stdout.strip()
+        except FileNotFoundError:
+            ak = ""
     if ak:
         payload = {"model": a.model, "max_tokens": 8000, "system": SYSTEM,
                    "messages": [{"role": "user", "content": user}]}

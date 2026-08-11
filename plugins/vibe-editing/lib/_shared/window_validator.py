@@ -79,6 +79,9 @@ def load_words(path):
         # flat list of {start, end, word}
         return d
     if isinstance(d, dict):
+        # Groq verbose_json with word granularity returns "segments": null — fall through to "words"
+        if not d.get("segments") and "words" in d:
+            d = {"words": d["words"]}
         if "segments" in d:
             words = []
             for seg in d["segments"]:

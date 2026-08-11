@@ -7,7 +7,7 @@ Config:
 """
 from __future__ import annotations
 
-from _util import run as ff
+from _util import enc_v, run as ff
 
 VERSION = "1.0.0"
 
@@ -19,7 +19,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
     filt = config.get("filter", DEFAULT_GRADE)
     ff(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", prior,
         "-vf", filt,
-        "-c:v", "h264_videotoolbox", "-b:v", "20M", "-tag:v", "avc1", "-pix_fmt", "yuv420p",
+        *enc_v("20M"),
         "-c:a", "copy", "-movflags", "+faststart", str(out_path)])
 
     upstream_meta = inputs_meta.get(list(inputs_meta.keys())[-1], {}) if inputs_meta else {}

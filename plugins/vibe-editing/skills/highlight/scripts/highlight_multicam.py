@@ -19,6 +19,7 @@ Renders each block, concats, muxes the continuous audio. Append the optional CTA
 (highlight_cta.py) or let highlight_cut.py handle it.
 """
 # ── vibe-editing portable path bootstrap ──
+import sys
 import os as _os, sys as _sys
 def _vibe_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
@@ -151,7 +152,7 @@ def main():
                 cam, ss, preset = a.acam, s + OA, "host16"
             run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{ss:.3f}", "-t", f"{dur:.3f}", "-i", cam,
                  "-an", "-c:v", "libx264", "-crf", "20", "-preset", "ultrafast", clip])
-            _cmd = ["python3", REFRAME, clip, out, "--preset", preset, "--res", "1080"]
+            _cmd = [sys.executable, REFRAME, clip, out, "--preset", preset, "--res", "1080"]
             _roi = a.guest_roi if shot == "guest" else a.host_roi
             if _roi:
                 _cmd += ["--roi", *[f"{v}" for v in _roi]]

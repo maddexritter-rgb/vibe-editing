@@ -49,6 +49,7 @@ def _acq_load_keys():
 _acq_load_keys()
 # ── end keys ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -90,7 +91,7 @@ from pathlib import Path
 FFMPEG = sorted(glob.glob("/opt/homebrew/Cellar/ffmpeg-full/*/bin/ffmpeg"))[0] \
          if glob.glob("/opt/homebrew/Cellar/ffmpeg-full/*/bin/ffmpeg") \
          else shutil.which("ffmpeg") or "ffmpeg"
-FFPROBE = str(Path(FFMPEG).parent / "ffprobe")
+FFPROBE = shutil.which("ffprobe") or str(Path(FFMPEG).parent / "ffprobe")
 
 # Brand FAST-RENDER STANDARD — VideoToolbox HW encode (~4x), resolution-aware single source of truth.
 sys.path.insert(0, VIBE_SHARED)

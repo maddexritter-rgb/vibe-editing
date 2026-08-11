@@ -86,17 +86,27 @@ if crit_ok:
     sys.exit(0)
 
 print(f"  {R}NOT READY{X} — install ONLY what's missing:\n")
+WIN = sys.platform == "win32"
+WINGET_IDS = {"ffmpeg": "Gyan.FFmpeg", "yt-dlp": "yt-dlp.yt-dlp",
+              "tesseract": "tesseract-ocr.tesseract", "rclone": "Rclone.Rclone"}
 if brew_need:
-    if not has("brew"):
-        print("    # Homebrew first: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"")
-    print(f"    brew install {' '.join(dict.fromkeys(brew_need))}")
+    if WIN:
+        for tool in dict.fromkeys(brew_need):
+            print(f"    winget install --id {WINGET_IDS.get(tool, tool)}")
+    else:
+        if not has("brew"):
+            print("    # Homebrew first: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"")
+        print(f"    brew install {' '.join(dict.fromkeys(brew_need))}")
 if pip_need:
-    print(f"    cd {ROOT} && python3 -m venv .venv && source .venv/bin/activate \\")
-    print(f"        && pip install {' '.join(dict.fromkeys(pip_need))}")
+    if WIN:
+        print(f"    cd {ROOT}; python -m venv .venv; .\\.venv\\Scripts\\python.exe -m pip install {' '.join(dict.fromkeys(pip_need))}")
+    else:
+        print(f"    cd {ROOT} && python3 -m venv .venv && source .venv/bin/activate \\")
+        print(f"        && pip install {' '.join(dict.fromkeys(pip_need))}")
     if "faster-whisper" in pip_need:
         print("    # ↑ FASTER alternative: skip whisper and paste a free GROQ_API_KEY into")
         print("    #   config/keys.env (console.groq.com) — ~10x faster, better quality, no install.")
 for n in notes:
     print(f"    ! {n}")
-print(f"\n  Then re-check:  python3 {Path(__file__).name}\n")
+print(f"\n  Then re-check:  {'python' if sys.platform == 'win32' else 'python3'} {Path(__file__).name}\n")
 sys.exit(1)

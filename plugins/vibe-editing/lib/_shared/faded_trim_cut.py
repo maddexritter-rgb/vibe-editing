@@ -28,6 +28,12 @@ Each span: start snaps to the silence just before word a; end snaps to the silen
 import argparse, json, os, subprocess, tempfile, shutil
 import numpy as np, librosa
 
+try:  # hardware H.264 args (h264_amf on this machine); libx264 fallback inside the helper
+    from fast_encode import hw_h264_args
+except Exception:
+    def hw_h264_args(bitrate="16M", ffmpeg="ffmpeg"):
+        return ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p"]
+
 SRC = None; words = None; FADE = 0.012
 def t0(i): x = words[i]; return x.get("start", x.get("s", 0.0))
 def t1(i): x = words[i]; return x.get("end",   x.get("e", 0.0))
@@ -105,12 +111,12 @@ def main():
         print(f"  span {i}: [{sp['a']}->{sp['b']}] {ss:.3f}->{to:.3f} ({dur:.2f}s)")
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{ss:.4f}", "-i", SRC, "-t", f"{dur:.4f}",
             "-af", f"afade=t=in:st=0:d={FADE},afade=t=out:st={max(0,dur-FADE):.4f}:d={FADE}",
-            "-r", fps, "-vsync", "cfr", "-c:v", "h264_videotoolbox", "-b:v", "16M",
+            "-r", fps, "-vsync", "cfr", *hw_h264_args("16M"),
             "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-video_track_timescale", ts, seg], check=True)
         parts.append(seg)
     lst = os.path.join(tmp, "list.txt"); open(lst, "w").write("".join(f"file '{p}'\n" for p in parts))
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst,
-        "-r", fps, "-vsync", "cfr", "-c:v", "h264_videotoolbox", "-b:v", "16M",
+        "-r", fps, "-vsync", "cfr", *hw_h264_args("16M"),
         "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-video_track_timescale", ts, a.out], check=True)
     print(f"  -> {a.out}")
     shutil.rmtree(tmp, ignore_errors=True)

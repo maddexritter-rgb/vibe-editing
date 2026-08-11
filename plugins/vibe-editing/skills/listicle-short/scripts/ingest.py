@@ -32,6 +32,7 @@ def _acq_load_keys():
 _acq_load_keys()
 # ── end keys ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -119,7 +120,7 @@ def main():
         dur = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
                                     '-of', 'csv=p=0', str(source)], capture_output=True, text=True).stdout.strip())
         traw = a.out / 't_raw.json'
-        run(['python3', _acq("caption-clips/scripts/transcribe_lv3.py"),
+        run([sys.executable, _acq("caption-clips/scripts/transcribe_lv3.py"),
              str(source), '--start', 0, '--end', round(dur, 2), '--out', traw],
             env=dict(os.environ, GROQ_API_KEY=k))
         for w in json.loads(traw.read_text())['words']:

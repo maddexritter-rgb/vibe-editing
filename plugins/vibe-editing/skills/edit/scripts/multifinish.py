@@ -28,6 +28,7 @@ passes this for multi-segment clips (called with t0=0) so dual-color stays right
 seam, where the single-offset t0->wav mapping can't. Absent → speaker color comes from clean.json."""
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -66,7 +67,8 @@ JUMPCUT = CAP / "scripts/jumpcut.py"
 DIRECTOR = HERE / "director_x.py"
 PRESET = SKILL / "presets/spice.json"  # ONE preset; generate_spice --burn is resolution-adaptive (1080/4K)
 MODEL = Path.home() / ".claude-video-vision/models/ggml-large-v3.bin"
-WCLI = "/opt/homebrew/bin/whisper-cli"
+import shutil as _shutil
+WCLI = _os.environ.get("WHISPER_CLI") or _shutil.which("whisper-cli") or "/opt/homebrew/bin/whisper-cli"
 
 
 def run(c, **k):
@@ -112,7 +114,7 @@ def main():
     src = clip
     if not a.no_tight:
         tight = capwork / f"{cid}_tight.mp4"
-        r = run(["python3", JUMPCUT, clip, tight,
+        r = run([sys.executable, JUMPCUT, clip, tight,
                  "--max-pause", "0.12", "--noise", "-30dB",
                  "--min-detect", "0.15", "--crf", "18"])
         ks = [(float(m[0]), float(m[1])) for m in re.findall(r'keep\s+([\d.]+)[^\d]+([\d.]+)', r.stdout)]
@@ -171,8 +173,8 @@ def main():
 
     # 2. normalize + proper-noun pass (from config.vocab)
     norm = capwork / f"{cid}_norm.json"
-    run(["python3", NORMALIZE, raw, norm])
-    run(["python3", SPICE_NORM, norm, norm])
+    run([sys.executable, NORMALIZE, raw, norm])
+    run([sys.executable, SPICE_NORM, norm, norm])
     dd = json.loads(norm.read_text())
     capn = {n.lower(): n for n in vocab}
     for w in dd["words"]:
@@ -195,7 +197,7 @@ def main():
 
     # 3. director_x (weight/size/italic), strip its per-word color — SPEAKER governs color
     style = capwork / f"{cid}_style.json"
-    run(["python3", DIRECTOR, norm, "--out", style, "--context", context])
+    run([sys.executable, DIRECTOR, norm, "--out", style, "--context", context])
     st = json.loads(style.read_text()) if style.exists() else {"words": {}}
     for v in st.get("words", {}).values():
         v.pop("c", None)
@@ -217,7 +219,7 @@ def main():
     # 5. spice + burn onto the FINAL clip
     ass = capwork / f"{cid}.ass"
     capped = capwork / f"{cid}_cap.mp4"
-    run(["python3", GEN_SPICE, norm,
+    run([sys.executable, GEN_SPICE, norm,
          "--preset", PRESET, "--out", ass, "--style", style,
          "--burn", src, "--burn-out", capped])
     if not capped.exists():

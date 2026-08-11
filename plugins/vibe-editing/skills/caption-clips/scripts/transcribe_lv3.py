@@ -23,6 +23,7 @@ Output JSON per clip:
       "words": [ {"word": str, "start": float, "end": float, "prob": float}, ... ] }
 """
 from __future__ import annotations
+import tempfile
 # ── engine bundled-keys autoload (config/keys.env) ──
 import os as _ko, pathlib as _kp
 def _acq_load_keys():
@@ -63,7 +64,7 @@ def transcribe_clip(source: str, start: float, end: float,
     # Unique temp per PROCESS (+ start for multi-chunk within one) so PARALLEL clips never clobber
     # each other's extracted audio. A fixed path keyed only by start (=0 for every clip) caused
     # cross-contaminated captions when clips transcribed concurrently — never again.
-    audio = f'/tmp/_transcribe_lv3_{os.getpid()}_{int(start*1000)}.mp3'
+    audio = os.path.join(tempfile.gettempdir(), f'_transcribe_lv3_{os.getpid()}_{int(start*1000)}.mp3')
     subprocess.run([
         'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error',
         '-ss', f'{start:.3f}', '-to', f'{end:.3f}', '-i', source,

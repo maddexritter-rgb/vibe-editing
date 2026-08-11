@@ -31,6 +31,7 @@ Style-stream JSON (all keys optional):
 """
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -684,7 +685,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
     if a.burn:
         out = a.burn_out or a.burn.with_name(a.burn.stem + "_spice.mp4")
-        fdir = str((SKILL / P["fonts_dir"]).resolve()).replace(":", r"\:")
+        # ffmpeg filter-graph path escaping: forward slashes (Windows backslashes get eaten
+        # by the filter parser), THEN escape the drive colon.
+        def _filt_path(p):
+            return str(p).replace("\\", "/").replace(":", r"\:")
+        fdir = _filt_path((SKILL / P["fonts_dir"]).resolve())
         # Bitrate must track the ACTUAL burn output resolution, not the preset PlayRes (which only
         # drives caption scaling). Else a 720 proxy gets the 4K bitrate -> ~5x too big. Probe the input.
         venc = (list(encoder_args_for(str(a.burn), "ffmpeg", tier="delivery")) if encoder_args_for
@@ -695,9 +700,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             # One white blob (from the shadow ASS) -> two independently blurred/offset layers:
             #   WIDE (soft, underneath) then TIGHT (dense, on top) -> crisp text on top.
             # Each layer: gblur(sigma) -> curves(intensity) -> alphamerge w/ solid black -> overlay(dx,dy).
-            sh_sub  = str(shadow_ass_path).replace(":", r"\:")
-            sh2_sub = str(shadow2_ass_path).replace(":", r"\:")
-            tx_sub  = str(text_ass_path).replace(":", r"\:")
+            sh_sub  = _filt_path(shadow_ass_path)
+            sh2_sub = _filt_path(shadow2_ass_path)
+            tx_sub  = _filt_path(text_ass_path)
             if pr_sh2_enabled:
                 fc = (
                     f"[0:v]split=5[video][bw][sw][bt][st];"
@@ -737,7 +742,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             ])
         else:
             # Classic single-pass ASS burn
-            sub = str(a.out).replace(":", r"\:")
+            sub = _filt_path(a.out)
             r = subprocess.run([
                 "ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", str(a.burn),
                 "-vf", f"subtitles=filename='{sub}':fontsdir='{fdir}'",

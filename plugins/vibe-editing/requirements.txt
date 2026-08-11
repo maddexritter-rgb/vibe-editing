@@ -4,7 +4,8 @@
 # SETUP.md — install them only if you use those paths.
 
 numpy
-opencv-python        # cv2 — face detection / reframe / frame analysis
+opencv-python<5      # cv2 — face detection / reframe / frame analysis. <5: OpenCV 5.0 removed
+                     # cv2.CascadeClassifier, which source-intel's Haar fallback still uses.
 Pillow               # PIL — title cards, image ops
 scipy                # signal processing (audio analysis, sync)
 librosa              # audio feature extraction / onset detection

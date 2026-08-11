@@ -2,6 +2,10 @@
 import subprocess, os
 
 FONTS = [
+    # Windows system fonts (this machine)
+    r"C:\Windows\Fonts\segoeui.ttf",
+    r"C:\Windows\Fonts\arial.ttf",
+    # macOS fallbacks (original kit)
     "/System/Library/Fonts/Supplemental/Arial.ttf",
     "/System/Library/Fonts/Helvetica.ttc",
     "/System/Library/Fonts/SFNS.ttf",

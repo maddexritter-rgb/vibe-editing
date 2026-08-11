@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from _util import run as ff, resolve_path
+from _util import enc_v, run as ff, resolve_path
 
 VERSION = "1.1.0"  # 1.1.0: music=null/"" → voice-only (no bed)
 
@@ -31,7 +31,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
             "-af", f"highpass=f=80,loudnorm=I={voice_lufs}:LRA=11:TP=-1.5,"
                    f"alimiter=limit={limiter}:level=disabled",
             "-map", "0:v", "-map", "0:a",
-            "-c:v", "h264_videotoolbox", "-b:v", "14M", "-tag:v", "avc1", "-pix_fmt", "yuv420p",
+            *enc_v("14M"),
             "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(out_path)])
         return {"out": str(out_path), "meta": {
             "music": None, "voice_lufs": voice_lufs, "limiter": limiter,
@@ -58,7 +58,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
         "-i", prior, "-i", str(music),
         "-filter_complex", fc,
         "-map", "0:v", "-map", "[a]",
-        "-c:v", "h264_videotoolbox", "-b:v", "14M", "-tag:v", "avc1", "-pix_fmt", "yuv420p",
+        *enc_v("14M"),
         "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(out_path)])
 
     return {"out": str(out_path), "meta": {

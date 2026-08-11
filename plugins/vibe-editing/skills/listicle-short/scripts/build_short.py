@@ -22,6 +22,7 @@ Usage:
 """
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 # ── engine bundled-keys autoload (config/keys.env) ──
+import tempfile
 import os as _ko, pathlib as _kp
 def _acq_load_keys():
     d = _kp.Path(__file__).resolve()
@@ -39,6 +40,7 @@ def _acq_load_keys():
 _acq_load_keys()
 # ── end keys ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -122,7 +124,7 @@ def eye_y_frac(path, n=10, t0=None, t1=None):
     ys = []
     for k in range(n):
         t = base + dur * (k + 1) / (n + 1)
-        tmp = '/tmp/_eyey_bs.png'
+        tmp = os.path.join(tempfile.gettempdir(), '_eyey_bs.png')
         subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-ss', f'{t:.3f}', '-i', str(path),
                         '-frames:v', '1', '-vf', 'scale=960:-1', tmp], check=False)
         img = _CV2.imread(tmp)
@@ -249,7 +251,7 @@ def main():
     if getattr(a, 'tighten', False):
         bt = work / 'assembled_tight.mp4'
         print(f"[3/6] dead-air tighten (jump-cut pauses > {a.max_pause}s)")
-        run(['python3', CAP / 'jumpcut.py', base, bt, '--max-pause', str(a.max_pause),
+        run([sys.executable, CAP / 'jumpcut.py', base, bt, '--max-pause', str(a.max_pause),
              '--noise', a.tighten_noise, '--min-detect', '0.12'])
         if bt.exists() and probe_dur(bt) > 1.0:
             base = bt
@@ -259,10 +261,10 @@ def main():
     genv = dict(os.environ); k = shell_key('GROQ_API_KEY')
     if k: genv['GROQ_API_KEY'] = k
     t_raw = work / 't_raw.json'; t_norm = work / 't_norm.json'; t_spice = work / 't_spice.json'
-    run(['python3', CAP / 'transcribe_lv3.py', base, '--start', 0, '--end', round(probe_dur(base), 3),
+    run([sys.executable, CAP / 'transcribe_lv3.py', base, '--start', 0, '--end', round(probe_dur(base), 3),
          '--out', t_raw], env=genv)
-    run(['python3', CAP / 'normalize_simple.py', t_raw, t_norm])
-    run(['python3', CAP / 'spice_normalize.py', t_norm, t_spice])
+    run([sys.executable, CAP / 'normalize_simple.py', t_raw, t_norm])
+    run([sys.executable, CAP / 'spice_normalize.py', t_norm, t_spice])
 
     # director style stream: provided > auto (caption_director) > light default
     style_arg = []
@@ -271,7 +273,7 @@ def main():
         ak = shell_key('ANTHROPIC_API_KEY')
         if ak:
             auto = work / 'director.json'
-            r = run(['python3', CAP / 'caption_director.py', t_spice, '--out', auto],
+            r = run([sys.executable, CAP / 'caption_director.py', t_spice, '--out', auto],
                     env=dict(os.environ, ANTHROPIC_API_KEY=ak))
             if r.returncode == 0 and auto.exists():
                 director = auto
@@ -291,7 +293,7 @@ def main():
     else:
         preset = base_preset
     ass = work / 'spice.ass'
-    run(['python3', CAP / 'generate_spice.py', t_spice, '--preset', preset, *style_arg, '--out', ass])
+    run([sys.executable, CAP / 'generate_spice.py', t_spice, '--preset', preset, *style_arg, '--out', ass])
 
     # 5) tactic labels above each numbered segment — point = cumulative start of that segment
     #    glass "N. CATEGORY" pills when cats are present (locked Speaker/SF look); else persistent #N numbers
@@ -307,7 +309,7 @@ def main():
         for st, n, cat in points:
             pargs += ['--point', f'{st}:#{n}:{cat}']
         tabbed = work / 'spice_tabs.ass'
-        run(['python3', CAP / 'spice_tabs.py', ass, '--clip-end', round(cum, 2),
+        run([sys.executable, CAP / 'spice_tabs.py', ass, '--clip-end', round(cum, 2),
              '--style', 'glass', '--y', pill_y, *pargs, '--out', tabbed])
         ass = tabbed
     elif points:
@@ -315,7 +317,7 @@ def main():
         for st, n, _cat in points:
             pargs += ['--point', f'{st}:#{n}']
         numbered = work / 'spice_num.ass'
-        run(['python3', CAP / 'spice_number.py', ass, '--above', '--clip-end', round(cum, 2),
+        run([sys.executable, CAP / 'spice_number.py', ass, '--above', '--clip-end', round(cum, 2),
              *pargs, '--out', numbered])
         ass = numbered
 

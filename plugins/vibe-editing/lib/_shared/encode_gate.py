@@ -24,6 +24,7 @@ Use it as a context manager around ffmpeg calls:
 
 Inside parallel.run_commands(kind="encode") it's already wired — most skills get it free.
 """
+import tempfile
 import fcntl
 import os
 import time
@@ -35,7 +36,7 @@ from pathlib import Path
 SLOTS = int(os.environ.get("VIBE_ENCODE_SLOTS", "3"))
 
 # Lock dir lives in /tmp so it's automatically cleaned on reboot and writable by every user.
-SLOT_DIR = Path(os.environ.get("VIBE_ENCODE_SLOT_DIR", "/tmp/acq_encode_slots"))
+SLOT_DIR = Path(os.environ.get("VIBE_ENCODE_SLOT_DIR") or os.path.join(tempfile.gettempdir(), "acq_encode_slots"))
 
 
 def _ensure_slots():
