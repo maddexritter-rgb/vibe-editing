@@ -27,6 +27,11 @@ NOT 9:16 shorts (shorts = the edit pipeline above). The CTA outro is user-suppli
 at `brand/cta/outro.mp4`. POST mode titles + schedules to the user's OWN YouTube via their own
 Google sign-in — never any other account.
 
+## Frame.io + Monday delivery
+When the user says "push these clips to Frame and Monday", "send these for review", or `/monday`,
+→ Use skill: `plugins/vibe-editing/skills/monday/SKILL.md`.
+Its first-use interview connects their own accounts and saves per-brand routes; shorts are the default.
+
 ## First-time setup (only if it isn't set up yet)
 If `plugins/vibe-editing/.venv` is missing, or `python3 plugins/vibe-editing/doctor.py` reports
 missing tools, set it up first: install only what's missing yourself (ffmpeg, yt-dlp, tesseract,

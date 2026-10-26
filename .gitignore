@@ -10,3 +10,11 @@ out/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Delivery credentials, private routes and presigned upload receipts stay local
+**/credentials.json
+**/token.json
+**/routes.json
+**/*.ledger.json
+**/*.ledger.json.lock
+**/*.pem

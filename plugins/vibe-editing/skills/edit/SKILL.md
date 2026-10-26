@@ -1299,8 +1299,8 @@ show the user, log to `_project.md`.
 
 Brand name format: `BRAND_CONTENTTYPE_SOURCE_Title_Editor_YYYYMMDD_V#` — set in `manifest.output.name`.
 
-your review tool / Monday = SPEAKER ONLY + explicit permission per-file per-conversation. Default:
-deliver locally, show the user, WAIT for "push it."
+External review delivery requires an explicit request for the selected batch. Default: deliver locally.
+When the user asks to push to Frame.io + Monday → Use skill: `monday`.
 
 ---
 

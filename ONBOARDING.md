@@ -72,7 +72,16 @@ plain English. Keep a visible to-do list of the steps below and check them off a
      me the finished clip (it lands in the 20_DELIVER folder). Ask what I'd change, adjust, and
      re-run until I love it.
 
-7) (OPTIONAL) STRONGER AUDITS ON LONG VIDEOS
+7) (OPTIONAL) UPLOAD TO FRAME + MONDAY
+   - Ask: "Want to connect Frame.io and Monday so I can deliver your clips for review?"
+   - If yes, use plugins/vibe-editing/skills/monday/SKILL.md and its onboarding reference.
+     Keep it short: brands, mostly shorts (default yes), editor initials, then each brand's
+     Frame exports-folder link + Monday board link. Walk me through my own Frame browser
+     sign-in and Monday API token; enter secrets privately, never in chat. Save the routes.
+   - Setup only connects and checks access. Upload when I say "push these clips to Frame
+     and Monday"; use the saved brand route and correct filenames.
+
+8) (OPTIONAL) STRONGER AUDITS ON LONG VIDEOS
    - The quality checks already run automatically. If I want the best results on long (>3 min)
      videos, offer to also set up the free Gemini "watch" add-on, and walk me through that key too.
 
@@ -89,6 +98,7 @@ English. Only use this kit — don't pull tools or keys from anywhere else on my
 - **Make clips anytime:** open Claude Code in the `vibe-editing` folder and just say *"make clips from this"* with a YouTube link or a video file — Claude already knows what to do, no command needed. *(An optional `/edit` shortcut exists if you set it up.)*
 - **Want longer horizontal "mid" videos for subscriber growth?** (16:9 clips from a Q&A / podcast, not 9:16 shorts) — say *"mine highlights from this"*. It ranks the strongest moments, cuts them, and appends your own outro if you've put one in `brand/cta/`. To title + schedule them to your channel afterward, say *"post and schedule these"* (connects to your own YouTube).
 - **Want to auto-post your finished shorts on a schedule?** Say *"fill my queue"* — it queues your 9:16 shorts to your channel through Buffer, hands-off. *(This one needs your own Buffer account + a storage bucket; the skill's `buffer/README.md` walks you through it.)*
+- **Deliver for review:** say *"push these clips to Frame and Monday"*. First use walks you through your own account connections and saves a destination for each brand. Shorts are the default; filenames and Monday review links are handled for you.
 - **Your finished clips** show up in that project's **`20_DELIVER/`** folder.
 - **Change anything later** — just tell Claude in plain English: *"make the captions bigger," "use this new logo," "cut it tighter," "don't open on a question."* It updates itself.
 - **Want the deeper walkthrough?** Open **`Vibe-Editing-Playbook.pdf`** in the same folder.

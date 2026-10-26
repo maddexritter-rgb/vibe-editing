@@ -42,3 +42,9 @@ Only the things that are pure liability and add nothing to clip quality:
 ## Note on captions
 The signature captions transcribe the clip first — so they need a **Groq key** (free tier) or
 local whisper. Reframing, cutting, and rendering work without any key.
+
+## Deliver to Frame.io + Monday
+Say **“push these clips to Frame and Monday.”** First use connects your own accounts and asks
+which brands you edit for, your editor initials, and where each brand's clips should go.
+Shorts are the default. The kit handles filenames, Frame uploads and linked Monday review cards.
+[Delivery setup](plugins/vibe-editing/skills/monday/references/onboarding.md).
