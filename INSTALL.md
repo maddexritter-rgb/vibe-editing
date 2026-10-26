@@ -47,16 +47,17 @@ pip install torch            # diarization / alignment
 pip install mediapipe        # face-mesh reframe path
 ```
 
-## 4. API keys — bring your own
+## 4. Run guided onboarding
 
-Edit `plugins/vibe-editing/config/keys.env`. **Nothing ships with a key.** The file auto-loads
-at runtime; paste yours once:
+Open this repo in your agent and say **“Set up Vibe Editing for me.”** Follow [ONBOARDING.md](ONBOARDING.md).
+The current `/edit` stack uses AssemblyAI for primary transcription, Gemini for source-listener
+notes, and team-granted editorial-brain access. Groq and Anthropic support the documented
+fallback/audit/script paths. [All credentials and exact setup steps](docs/CONNECTIONS.md).
 
-```bash
-GROQ_API_KEY=          # free tier at console.groq.com — optional, falls back to local whisper
-ANTHROPIC_API_KEY=     # optional — captions fall back to the `claude` CLI if installed
-ELEVENLABS_API_KEY=    # optional — audio cleanup / SFX / voice isolation
-```
+The agent runs `python3 plugins/vibe-editing/onboard.py set ASSEMBLYAI_API_KEY` in an interactive
+terminal so you can enter your key privately, then repeats for selected connections. Real values
+are stored outside the repo and auto-loaded; `config/keys.env.example` contains empty examples.
+Never put a real key in tracked files or agent chat. `onboard.py status` reports presence only.
 
 ## 5. Your assets
 
@@ -86,5 +87,4 @@ python3 "$CLAUDE_PLUGIN_ROOT/skills/render/engine.py" <project_dir> --bump   # r
 
 ## 8. First run
 
-Test one short clip end-to-end and confirm: ffmpeg + libass present, your keys pasted (or local
-whisper installed), a font in `fonts/`, and a music folder set. After that, batches just work.
+Test one short clip end-to-end and confirm: ffmpeg + libass present, AssemblyAI connected and the selected backend available, a font in `fonts/`, and a music folder set. After that, batches just work.

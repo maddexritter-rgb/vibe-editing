@@ -23,6 +23,6 @@ echo "Running health check..."
 python3 "$PLUG/doctor.py" || true
 echo ""
 echo "Next steps:"
-echo "  1) (optional) paste a free Groq key into plugins/vibe-editing/config/keys.env"
+echo "  1) Open this repo in your agent and say: Set up Vibe Editing for me (ONBOARDING.md)"
 echo "  2) In Claude Code:  /edit <your youtube link>"
 echo "     or from the terminal:  ./bin/vibe-editing \"<your youtube link>\""

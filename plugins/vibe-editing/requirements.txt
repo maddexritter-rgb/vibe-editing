@@ -21,7 +21,7 @@ pyspellchecker       # caption spell QC
 # Ingest — YouTube/URL footage download
 yt-dlp
 
-# Offline transcription — the KEY-FREE fallback, used automatically when GROQ_API_KEY is empty.
+# Offline transcription — availability fallback for explicitly selected local paths.
 # CPU-friendly (int8). First run downloads the model (~150 MB for 'small'). This is what makes
-# the kit work with no API key at all.
+# local fallback available. Standard source ingest uses ASSEMBLYAI_API_KEY.
 faster-whisper

@@ -26,7 +26,7 @@ tuned for short-form editing QA and reference-matching.
    directly; there is no lossy "describer" model in between. The local scripts here do the
    same via ffmpeg → PNG that I then Read.
 2. **Audio → transcript.** The MCP transcribes with the configured backend. For *editing*
-   captions, keep using the canonical transcription stack (Groq + WhisperX + vocab-correct)
+   captions, keep using the canonical `long-form-ingest` stack (AssemblyAI primary with provider evidence)
    — it is better on proper nouns. Use the MCP transcript for *understanding/QA*, not for
    generating final captions.
 3. **Long-form (>~3 min) → Gemini.** When the Gemini key is set, flip the backend to
@@ -105,8 +105,8 @@ Current: `frame_mode=images`, `frame_resolution=1024`, `whisper_model=large-v3`,
 `enable_index=true`, `audio_model=gemini-3-flash-preview`.
 
 - **To turn Gemini on** (native long-form watching + best audio): set `GEMINI_API_KEY`
-  (the project `.mcp.json` reads `${GEMINI_API_KEY}`, or hard-code it there like the
-  elevenlabs key already is), then `video_configure backend=gemini-api`.
+  through the host's private environment (never hardcode a secret in `.mcp.json`), then
+  `video_configure backend=gemini-api` if that MCP add-on is installed. See `docs/CONNECTIONS.md`.
 - **Privacy:** the `gemini-api` backend uploads footage to Google. For client work that
   must stay local, keep `backend=local` (large-v3 + local frames) — everything in MODE A/B/C
   except Gemini one-pass watching still works fully offline.
@@ -124,6 +124,6 @@ burnt-in text) + `contact_sheet.py` (so the auditor visually confirms framing #1
 - Don't return hundreds of base64 frames into context — segment, then sample. `view_sample`
   / `--n` keep token cost sane.
 - `large-v3` (no turbo) is accurate but slow on long files; that is fine for QA, not for
-  bulk transcription — use the canonical Groq stack for that.
+  bulk transcription — use the canonical `long-form-ingest` stack for that.
 - OCR reads what is on screen, including watermarks/UI; trust the caption-band crop (`--band`)
   and your own eyes over raw token lists.

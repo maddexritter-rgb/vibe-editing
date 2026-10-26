@@ -41,6 +41,9 @@ def _vibe_root():
 VIBE_ROOT = _vibe_root()
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 CONFIG_DIR = _os.path.join(VIBE_ROOT, "config")
+_sys.path.insert(0, VIBE_ROOT)
+from vibe_credentials import load_keys
+load_keys()
 # ── end bootstrap ──
 import argparse, datetime as dt
 from title_sop import build_title1_system, local_title

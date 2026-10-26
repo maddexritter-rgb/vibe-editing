@@ -48,7 +48,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/caption-clips/scripts/spice_caption.py <inp
 ```
 
 This is video-in → spice-captioned-video-out. It runs the locked chain:
-`transcribe (Groq) → spice_format → caption_director → generate_spice --burn → caption_qc`.
+`transcribe (AssemblyAI primary; Groq fallback) → spice_format → caption_director → generate_spice --burn → caption_qc`.
 The output has the two-layer gblur Premiere shadow, resolution-adaptive scaling, and per-word color.
 
 **Text normalization = `spice_format.py` (The reference editor's company.com spec, locked 2026-06-11).** This single

@@ -36,14 +36,10 @@ def _acq_load_keys():
     d = _kp.Path(__file__).resolve()
     for p in (d, *d.parents):
         if (p / ".claude-plugin").is_dir():
-            f = p / "config" / "keys.env"
-            if f.is_file():
-                for _ln in f.read_text().splitlines():
-                    _ln = _ln.strip()
-                    if _ln and not _ln.startswith("#") and "=" in _ln:
-                        _k, _v = _ln.split("=", 1); _k, _v = _k.strip(), _v.strip()
-                        if _k and "PASTE" not in _v and not _ko.environ.get(_k):
-                            _ko.environ[_k] = _v
+            import sys as _ks
+            _ks.path.insert(0, str(p))
+            from vibe_credentials import load_keys
+            load_keys()
             return
 _acq_load_keys()
 # ── end keys ──
@@ -253,8 +249,8 @@ def main():
     # GROQ is only needed when we actually transcribe (gen without pinned words). Burn-only never does.
     will_transcribe = (not args.burn_from) and not (args.words and Path(args.words).exists())
     groq = load_key("GROQ_API_KEY")
-    if will_transcribe and not groq:
-        raise SystemExit("missing GROQ_API_KEY (transcription) — not in env or ~/.zshrc")
+    if will_transcribe and not groq and not os.environ.get("ASSEMBLYAI_API_KEY"):
+        raise SystemExit("Connect ASSEMBLYAI_API_KEY through onboarding before transcription")
     if groq:
         env["GROQ_API_KEY"] = groq
     ak = load_key("ANTHROPIC_API_KEY")

@@ -38,7 +38,7 @@ The full loop: `MINE → (you upload drafts) → POST → (Studio re-export feed
 ## MODE A — MINE  (recording → finished mids)
 
 ```
-[1] TRANSCRIBE  word-level + diarized (Groq whisper-large-v3, local faster-whisper fallback)
+[1] TRANSCRIBE  word-level + diarized (AssemblyAI primary, labeled fallback evidence)
                 → highlight_diarize labels Spk0=Host, Spk1=Guest/Caller (no names)
 [2] FORMAT      highlight_miner.py format <transcript> --out <work>/miner_input.txt
 [3] MINE        Claude segments miner_input.txt → _segments.json (references/cutting_prompts.md STAGE 1)
@@ -57,21 +57,9 @@ Mining judgment lives in: `references/cutting_prompts.md` (how Q&A/hotline gets 
 questions; never optimize for CTR).
 
 ### Transcription (this kit's standard)
-Use Groq `whisper-large-v3` (free tier) with a local `faster-whisper` fallback — the same
-pattern the rest of the kit uses:
-```
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/caption-clips/scripts/transcribe_lv3.py \
-    <recording> --start <S> --end <E> --out <work>/words.json
-```
-No `GROQ_API_KEY`? It automatically falls back to local `faster-whisper` (`pip install
-faster-whisper`). Then diarize host vs guest:
-```
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/highlight/scripts/highlight_diarize.py \
-    --words <work>/words.json --host-mic A.wav --guest-mic B.wav \
-    --prior prior.json --seg-start 0 --out <work>/edl.json
-```
-(Single-mic source? Skip diarize — the cutting prompt resolves Speaker 0 = Host /
-Speaker 1 = Guest from turn-taking.)
+→ Use skill: `long-form-ingest` for AssemblyAI-first transcript evidence and the source listener.
+For clip-local caption words the bundled `caption-clips/scripts/transcribe_lv3.py` now selects
+AssemblyAI when connected. Keep `GROQ_API_KEY` for audit/fallback helpers, not primary onboarding.
 
 ---
 
