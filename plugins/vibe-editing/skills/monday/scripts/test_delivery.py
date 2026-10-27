@@ -29,6 +29,8 @@ class Frame:
         self.route, self.files, self.stacks, self.created = route['frame'], {}, {}, 0
 
     def get(self, path):
+        if path.endswith('/status'):
+            return {'data': {'upload_complete': False, 'upload_failed': False}}
         if '/files/' in path:
             return {'data': self.files[path.rsplit('/', 1)[-1]]}
         if '/folders/' in path:
@@ -185,6 +187,36 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(result['files'][0]['frame_url'], old_result['files'][0]['frame_url'])
         self.assertEqual(self.fc.stacks['stack'][0]['id'], '2')
         self.assertTrue(self.run_push(plan)['complete'])
+
+    def test_ready_assets_complete_without_reupload(self):
+        original = self.fc.post
+        def created(path, body):
+            response = original(path, body)
+            response['data']['status'] = 'ready'
+            return response
+        with patch.object(self.fc, 'post', side_effect=created), patch('deliver.upload_parts') as upload:
+            self.assertTrue(self.run_push()['complete'])
+            upload.assert_not_called()
+        self.assertTrue(self.run_push()['complete'])
+        self.assertEqual(self.fc.created, 1)
+
+    def test_uncertain_upload_reconciles_complete_bytes_by_exact_id(self):
+        self.run_push()
+        data = json.loads(self.ledger.read_text())
+        data['entries']['clip.mp4']['bytes'] = 'unknown'
+        self.ledger.write_text(json.dumps(data))
+        self.fc.files['1']['status'] = 'processing'
+        original = self.fc.get
+        def get(path):
+            if path.endswith('/status'):
+                return {'data': {'upload_complete': True, 'upload_failed': False}}
+            return original(path)
+        with patch.object(self.fc, 'get', side_effect=get), patch('deliver.upload_parts') as upload:
+            self.assertFalse(self.run_push()['complete'])
+            upload.assert_not_called()
+        self.assertEqual(json.loads(self.ledger.read_text())['entries']['clip.mp4']['bytes'], 'complete')
+        self.fc.files['1']['status'] = 'ready'
+        self.assertTrue(self.run_push()['complete'])
 
     def test_missing_revision_ids_and_bad_date_stop(self):
         for update in [{'version': 2}, {'shoot_date': '20260230'}]:

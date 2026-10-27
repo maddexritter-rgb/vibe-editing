@@ -34,4 +34,5 @@ def load_keys():
     # Explicit process environment wins; user's private file wins over legacy local config.
     for path in (KEYS_FILE, ROOT / 'config/keys.env'):
         for name, value in read_values(path).items():
-            os.environ.setdefault(name, value)
+            if not os.environ.get(name):
+                os.environ[name] = value

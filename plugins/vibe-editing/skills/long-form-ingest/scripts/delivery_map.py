@@ -166,7 +166,10 @@ def transcript_block(words, first, last, offset):
 
 def clean_tags(raw, first, last):
     kept, dropped = [], 0
-    for tag in (raw or {}).get('tags', []) if isinstance(raw, dict) else []:
+    tags = raw.get('tags') if isinstance(raw, dict) else None
+    if not isinstance(tags, list):
+        return [], 1
+    for tag in tags:
         try:
             a, b = int(tag['word_first']), int(tag['word_last'])
             ok = first <= a <= b <= last and tag['type'] in TYPES and tag.get('confidence') in CONFIDENCE
@@ -193,9 +196,14 @@ def build(words_path, audio, out, cache_dir, chunk_s=600, parallel=4, max_usd=15
         first, last = span
         start = max(0.0, words[first]['start'] - 0.3)
         end = words[last]['end'] + 0.3
-        audio_bytes = encoder(audio, start, end - start)
-        prompt = PROMPT.format(types=prompt_types, transcript=transcript_block(words, first, last, start))
-        r = caller(audio_bytes, prompt, cache_dir=cache_dir, budget=budget, models=models)
+        try:
+            audio_bytes = encoder(audio, start, end - start)
+            prompt = PROMPT.format(types=prompt_types, transcript=transcript_block(words, first, last, start))
+            r = caller(audio_bytes, prompt, cache_dir=cache_dir, budget=budget, models=models)
+        except Exception as exc:
+            r = {'status': 'UNAVAILABLE', 'detail': f'listener chunk failed: {type(exc).__name__}'}
+        if r.get('status') in ('OK', 'CACHED') and (not isinstance(r.get('result'), dict) or not isinstance(r['result'].get('tags'), list)):
+            r = {**r, 'status': 'UNAVAILABLE', 'detail': 'listener response has an invalid tags array'}
         tags, dropped = clean_tags(r.get('result'), first, last) if r['status'] in ('OK', 'CACHED') else ([], 0)
         return {'word_range': [first, last], 'audio_window_s': [round(start, 3), round(end, 3)],
                 'status': r['status'], 'model': r.get('model'), 'detail': r.get('detail'), 'usage': r.get('usage'),

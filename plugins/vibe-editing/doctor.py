@@ -74,7 +74,7 @@ print(f"  Groq audit/fallback {mark(groq)}   {Y}(separate from primary AssemblyA
 crit_ok &= aai
 if not aai: notes.append("Open ONBOARDING.md: connect AssemblyAI with onboard.py set ASSEMBLYAI_API_KEY")
 cap = "Anthropic key" if anth_key else "claude CLI / built-in fallback"
-print(f"  caption styling    {mark(anth_key or has("claude"))}   {Y}({cap}){X}")
+print(f"  caption styling    {mark(anth_key or has('claude'))}   {Y}({cap}){X}")
 
 # ── verdict + install plan ──
 print("  " + "-" * 36)

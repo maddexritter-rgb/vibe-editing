@@ -9,6 +9,8 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
+import tempfile
 from pathlib import Path
 import subprocess
 import threading
@@ -22,7 +24,7 @@ import urllib.request
 # These notes inform the editor-model; they are never a qualified approval.
 DEFAULT_MODEL = 'gemini-4-argon'
 FALLBACK_MODELS = ('gemini-4-argon', 'gemini-3.8-flash', 'gemini-3.1-pro-preview')
-UNAVAILABLE_MODEL_CODES = (429, 500, 503, 504)
+UNAVAILABLE_MODEL_CODES = (404, 429, 500, 503, 504)
 # USD per 1M tokens for prompts <= 200k tokens (paid tier, checked 2026-10-15).
 # Used only for the budget cap and cost report; the usage log is the real record.
 PRICES = {'gemini-3.1-pro-preview': (2.00, 12.00), 'gemini-4-argon': (2.00, 10.00),
@@ -88,8 +90,13 @@ def call(audio_bytes, prompt, *, cache_dir, budget, model=DEFAULT_MODEL, slot='p
     key = hashlib.sha256(audio_bytes + b'\0' + prompt.encode() + b'\0' + model.encode()).hexdigest()
     cached = cache_dir / f'{key}.json'
     if cached.exists():
-        saved = json.loads(cached.read_text())
-        return {**saved, 'status': 'CACHED', 'usd': 0.0}
+        try:
+            saved = json.loads(cached.read_text())
+            if not isinstance(saved, dict) or not isinstance(saved.get('result'), dict):
+                raise ValueError('invalid listener cache schema')
+            return {**saved, 'status': 'CACHED', 'usd': 0.0}
+        except (OSError, ValueError):
+            pass  # An interrupted cache is a miss, never a fatal listener failure.
     if not budget.take():
         return {'status': 'UNAVAILABLE', 'detail': 'budget cap reached; continuing on local evidence'}
     try:
@@ -137,7 +144,16 @@ def call(audio_bytes, prompt, *, cache_dir, budget, model=DEFAULT_MODEL, slot='p
         return {'status': 'UNAVAILABLE', 'usage': usage, 'usd': usd, 'detail': 'response was not JSON'}
     saved = {'result': result, 'usage': usage, 'model': model,
              'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest()}
-    cached.write_text(json.dumps(saved))
+    descriptor, pending = tempfile.mkstemp(dir=cache_dir, suffix='.pending')
+    try:
+        with os.fdopen(descriptor, 'w') as handle:
+            json.dump(saved, handle)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(pending, cached)
+    finally:
+        if os.path.exists(pending):
+            os.unlink(pending)
     return {**saved, 'status': 'OK', 'usd': usd}
 
 

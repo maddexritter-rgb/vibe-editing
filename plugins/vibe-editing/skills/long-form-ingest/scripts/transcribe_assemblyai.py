@@ -19,7 +19,8 @@ def main():
         parser.error('Connect ASSEMBLYAI_API_KEY through onboarding before primary ingest.')
     if args.out.exists():
         parser.error('Output already exists. Reuse the current transcript or choose a new revision.')
-    result = transcribe(str(args.source), use_cache=False, profile='editorial_ingest')
+    result = transcribe(str(args.source), use_cache=False, profile='editorial_ingest',
+                        state_path=args.out.with_suffix('.job.json'))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open('x') as out:
         json.dump(result, out, indent=2)

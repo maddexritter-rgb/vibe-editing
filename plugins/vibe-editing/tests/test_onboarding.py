@@ -50,6 +50,12 @@ class SetupTests(unittest.TestCase):
         credentials.load_keys()
         self.assertEqual(os.environ['ASSEMBLYAI_API_KEY'], 'private')
 
+    def test_empty_export_does_not_mask_private_key(self):
+        onboard.save_field('ASSEMBLYAI_API_KEY', 'private')
+        os.environ['ASSEMBLYAI_API_KEY'] = ''
+        credentials.load_keys()
+        self.assertEqual(os.environ['ASSEMBLYAI_API_KEY'], 'private')
+
     def test_status_redacts_values_and_does_not_claim_auth(self):
         onboard.save_field('ASSEMBLYAI_API_KEY', 'secret-never-print')
         result = onboard.status()
@@ -120,7 +126,7 @@ class SetupTests(unittest.TestCase):
             mock.json.return_value = data
             return mock
         with patch('httpx.post', side_effect=[response({'upload_url': 'https://upload.invalid'}), response({'id': 'transcript-1'})]) as post, patch('httpx.get', return_value=response(native)):
-            result = asr._assemblyai(str(audio), 'dummy-key', None, None)
+            result = asr._assemblyai(str(audio), 'dummy-key', None, None, state_path=self.root / 'job.json')
         body = post.call_args.kwargs['json']
         self.assertTrue(body['disfluencies'])
         self.assertTrue(body['speaker_labels'])

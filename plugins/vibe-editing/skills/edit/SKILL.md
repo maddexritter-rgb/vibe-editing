@@ -23,10 +23,10 @@ description: >
 > or point `VIBE_ASSETS` at it. The core cut→reframe→caption→render→audit path needs neither. See the
 > plugin's `INSTALL.md`.
 >
-> **First run:** follow the repository's `ONBOARDING.md` before production. The current
+> **First run:** follow [onboarding](../../docs/ONBOARDING.md) before production. The current
 > `/edit` source stack is AssemblyAI primary ingest, Gemini listener notes, and scoped editorial-brain
 > access. Groq serves audit/fallback paths; Anthropic supports scripted LLM helpers. Credentials
-> are private and loaded through `vibe_credentials.py`; see `docs/CONNECTIONS.md` for exact roles.
+> are private and loaded through `vibe_credentials.py`; see [connections](../../docs/CONNECTIONS.md) for exact roles.
 > **Ingest:** accept local files, YouTube URLs via yt-dlp, and Google Drive links via `footage-fetch`.
 
 > **🛑 POST-MORTEM FROM Tier1 Q&A BATCH 2026-06-14 → 2026-06-16 — READ FIRST IF EDITING Q&A**

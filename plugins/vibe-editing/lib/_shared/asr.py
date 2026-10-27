@@ -5,6 +5,9 @@ Preserve provider evidence and mark fallback editorial transcripts PARTIAL.
 from __future__ import annotations
 
 import os
+import json
+import hashlib
+import fcntl
 import re
 import subprocess
 import tempfile
@@ -13,6 +16,7 @@ from pathlib import Path
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from onboard import private_json
 from vibe_credentials import load_keys
 load_keys()
 
@@ -24,6 +28,18 @@ AAI_MODELS = ["universal-3-5-pro", "universal-2"]
 
 class AsrUnavailable(RuntimeError):
     """No transcription engine could produce a result. Gates must go UNKNOWN, not PASS."""
+
+
+class AsrPending(AsrUnavailable):
+    """A paid job may still be running. Resume its receipt; never submit a second job."""
+
+
+def content_digest(path):
+    digest = hashlib.sha256()
+    with open(path, 'rb') as source:
+        for chunk in iter(lambda: source.read(4 * 1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def api_key(name: str, config_path: str | None = None) -> str | None:
@@ -87,77 +103,117 @@ def _groq(wav: str, key: str) -> dict | None:
 
 
 def _assemblyai(wav: str, key: str, prompt: str | None,
-                keyterms: list[str] | None) -> dict | None:
-    """Return provider-native word evidence normalized to the shared shape."""
-    try:
-        import httpx
+                keyterms: list[str] | None, state_path=None) -> dict | None:
+    """Submit once, persist the accepted ID immediately, and resume exact-ID polling."""
+    global _LAST_AAI_ERROR
+    import httpx
+    options = {"speech_models": AAI_MODELS, "language_code": "en",
+               "disfluencies": True, "speaker_labels": True}
+    if prompt:
+        options["prompt"] = prompt
+    if keyterms:
+        options["keyterms_prompt"] = [str(x) for x in keyterms if str(x).strip()][:900]
+    scope = {"audio_sha256": content_digest(wav), "options": options,
+             "key_fingerprint": hashlib.sha256(key.encode()).hexdigest()}
+    if state_path is None:
+        digest = hashlib.sha256(json.dumps(scope, sort_keys=True).encode()).hexdigest()
+        state_path = Path(os.environ.get("VIBE_ASR_CACHE", str(Path.home() / ".cache/vibe-editing/asr"))) / 'jobs' / (digest + '.json')
+    state_path = Path(state_path)
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    # Prevent two processes from submitting the same source concurrently.
+    descriptor = os.open(str(state_path) + '.lock', os.O_CREAT | os.O_RDWR, 0o600)
+    with os.fdopen(descriptor, 'a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise AsrPending('Another process owns this ASR job. Resume the same receipt later.') from None
+        if state_path.exists():
+            try:
+                state = json.loads(state_path.read_text())
+                if not isinstance(state, dict):
+                    raise ValueError('invalid ASR receipt schema')
+            except (OSError, ValueError):
+                raise AsrPending('ASR receipt is unreadable; reconcile it before any resubmission.') from None
+            if state.get('scope') != scope:
+                raise AsrPending('ASR source/settings changed. Use a new versioned output/receipt.')
+        else:
+            state = {'schema': 'vibe-asr-job/v1', 'scope': scope}
         headers = {"authorization": key}
-        with open(wav, "rb") as f:
-            upload = httpx.post(f"{AAI_BASE}/v2/upload", headers=headers,
-                                content=f, timeout=180)
-        upload.raise_for_status()
-        body: dict = {
-            "audio_url": upload.json()["upload_url"],
-            "speech_models": AAI_MODELS,
-            "language_code": "en",
-            "disfluencies": True,
-            "speaker_labels": True,
-        }
-        if prompt:
-            body["prompt"] = prompt
-        if keyterms:
-            body["keyterms_prompt"] = [str(x) for x in keyterms if str(x).strip()][:900]
-        submitted = httpx.post(f"{AAI_BASE}/v2/transcript", headers=headers,
-                               json=body, timeout=60)
-        submitted.raise_for_status()
-        transcript_id = submitted.json().get("id")
+        transcript_id = state.get('transcript_id')
+        if not transcript_id and state.get('phase') == 'submitting':
+            raise AsrPending('Submission outcome unknown. Reconcile the saved receipt before resubmitting.')
         if not transcript_id:
-            raise RuntimeError("submit response did not include transcript id")
+            try:
+                with open(wav, 'rb') as source:
+                    upload = httpx.post(f"{AAI_BASE}/v2/upload", headers=headers, content=source, timeout=180)
+                upload.raise_for_status()
+                body = {**options, 'audio_url': upload.json()['upload_url']}
+                state.update(phase='submitting')
+                private_json(state_path, state)  # Write intent before the billable request.
+                submitted = httpx.post(f"{AAI_BASE}/v2/transcript", headers=headers, json=body, timeout=60)
+                submitted.raise_for_status()
+                transcript_id = submitted.json().get('id')
+                if not transcript_id:
+                    raise AsrPending('Submit returned no ID. Reconcile the saved receipt.')
+                state.update(transcript_id=transcript_id, phase='polling')
+                private_json(state_path, state)  # Durable before the first GET or process interruption.
+            except AsrPending:
+                raise
+            except Exception as exc:
+                if transcript_id:
+                    raise AsrPending(f'Accepted job {transcript_id} could not be saved; reconcile that ID before resubmitting.') from None
+                code = getattr(getattr(exc, 'response', None), 'status_code', None)
+                if state.get('phase') == 'submitting':
+                    if code in (400, 401, 402, 403, 422, 429):
+                        state['phase'] = 'rejected'
+                        private_json(state_path, state)
+                    else:
+                        raise AsrPending('Submit outcome unknown; resume/reconcile the same receipt.') from None
+                _LAST_AAI_ERROR = f'{type(exc).__name__}: HTTP {code or "unavailable"}'
+                return None
         deadline = time.time() + 900
-        data = None
-        while time.time() < deadline:
-            response = httpx.get(f"{AAI_BASE}/v2/transcript/{transcript_id}",
-                                 headers=headers, timeout=60)
-            response.raise_for_status()
-            data = response.json()
-            if data.get("status") == "completed":
-                break
-            if data.get("status") == "error":
-                raise RuntimeError(data.get("error") or "unknown transcription error")
-            time.sleep(2)
-        if not data or data.get("status") != "completed":
-            raise RuntimeError("transcription poll timed out")
-        words = [{
-            "word": w.get("text", "").strip(),
-            "start": w.get("start", 0) / 1000.0,
-            "end": w.get("end", 0) / 1000.0,
-            "confidence": w.get("confidence"),
-            "speaker": w.get("speaker"),
-        } for w in data.get("words") or []]
-        utterances = [{
-            "text": u.get("text", ""),
-            "start": u.get("start", 0) / 1000.0,
-            "end": u.get("end", 0) / 1000.0,
-            "speaker": u.get("speaker"),
-            "confidence": u.get("confidence"),
-        } for u in data.get("utterances") or []]
-        return {
-            "text": data.get("text", ""),
-            "words": words,
-            "segments": utterances,
-            "utterances": utterances,
-            "engine": "assemblyai",
-            "model": data.get("speech_model") or AAI_MODELS[0],
-            "evidence_status": "FULL",
-            "provider_transcript_id": transcript_id,
-            "provider_response": data,
-        }
-    except Exception as e:
-        global _LAST_AAI_ERROR
-        body = getattr(getattr(e, "response", None), "text", "") or ""
-        _LAST_AAI_ERROR = f"{type(e).__name__}: {e} {body[:200]}"
-        print(f"[asr] assemblyai failed ({_LAST_AAI_ERROR}) — falling back", flush=True)
-        return None
+        try:
+            while time.time() < deadline:
+                response = httpx.get(f"{AAI_BASE}/v2/transcript/{transcript_id}", headers=headers, timeout=60)
+                response.raise_for_status()
+                data = response.json()
+                if data.get('status') == 'completed':
+                    break
+                if data.get('status') == 'error':
+                    state['phase'] = 'failed'
+                    private_json(state_path, state)
+                    _LAST_AAI_ERROR = 'Provider reported a terminal transcription error for the recorded job.'
+                    return None
+                time.sleep(2)
+            else:
+                raise AsrPending('Transcription still pending. Resume the same receipt to poll its ID.')
+        except AsrPending:
+            raise
+        except Exception:
+            raise AsrPending('Polling interrupted. Resume the same receipt; the accepted job ID is saved.') from None
+        state['phase'] = 'completed'
+        private_json(state_path, state)
+
+    def word(w):
+        return {'word': w.get('text', '').strip(), 'start': w.get('start', 0) / 1000.0,
+                'end': w.get('end', 0) / 1000.0, 'confidence': w.get('confidence'),
+                'speaker': w.get('speaker')}
+    words = [word(w) for w in data.get('words') or []]
+    utterances = [{'text': u.get('text', ''), 'start': u.get('start', 0) / 1000.0,
+                   'end': u.get('end', 0) / 1000.0, 'speaker': u.get('speaker'),
+                   'confidence': u.get('confidence'),
+                   'words': [word(w) for w in u.get('words') or []]}
+                  for u in data.get('utterances') or []]
+    # Older consumers traverse segments[*].words. Preserve every flat word even when
+    # the provider omits utterance words (for example an unlabeled or silent turn).
+    if words and not any(u['words'] for u in utterances):
+        utterances = [{'text': data.get('text', ''), 'start': words[0]['start'],
+                       'end': words[-1]['end'], 'words': words}]
+    return {'text': data.get('text', ''), 'words': words, 'segments': utterances,
+            'utterances': utterances, 'engine': 'assemblyai',
+            'model': data.get('speech_model_used') or data.get('speech_model') or 'unknown',
+            'evidence_status': 'FULL', 'provider_transcript_id': transcript_id,
+            'provider_response': data}
 
 
 def _mlx(wav: str) -> dict | None:
@@ -178,23 +234,22 @@ def _mlx(wav: str) -> dict | None:
         return None
 
 
-def _cache_path(clip_path: str, profile: str) -> Path:
-    """Cache key = clip path + size + mtime, so a re-render invalidates it."""
-    import hashlib
-    st = os.stat(clip_path)
-    h = hashlib.sha256(
-        f"{os.path.abspath(clip_path)}|{st.st_size}|{int(st.st_mtime)}|{profile}".encode()
-    ).hexdigest()[:16]
-    d = Path(os.environ.get("VIBE_ASR_CACHE", str(Path.home() / ".cache/vibe-editing/asr")))
-    d.mkdir(parents=True, exist_ok=True)
-    return d / f"{h}.json"
+def _cache_path(clip_path: str, profile: str, prompt=None, keyterms=None) -> Path:
+    """Bind cached words to full content, profile, vocabulary and requested models."""
+    identity = {'content': content_digest(clip_path), 'profile': profile, 'prompt': prompt,
+                'keyterms': keyterms, 'assemblyai_models': AAI_MODELS,
+                'groq_model': GROQ_MODEL, 'mlx_model': MLX_MODEL}
+    digest = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+    directory = Path(os.environ.get('VIBE_ASR_CACHE', str(Path.home() / '.cache/vibe-editing/asr')))
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory / (digest + '.json')
 
 
 def transcribe(clip_path: str, use_cache: bool = True, *, profile: str = "audit",
-               prompt: str | None = None, keyterms: list[str] | None = None) -> dict:
+               prompt: str | None = None, keyterms: list[str] | None = None, state_path=None) -> dict:
     """Transcribe with word timestamps. Raises AsrUnavailable when no engine works.
 
-    CACHED by (path, size, mtime): the step-9 audit fan-out runs audit-audio,
+    CACHED by media content and transcription settings: the step-9 audit fan-out runs audit-audio,
     audit-captions and audit-script on the SAME delivered file, and each used to
     transcribe it independently — 3 identical ASR calls per clip. First caller pays,
     the rest hit the cache. A re-render changes mtime/size, so the cache self-invalidates.
@@ -202,7 +257,7 @@ def transcribe(clip_path: str, use_cache: bool = True, *, profile: str = "audit"
     """
     if profile not in {"audit", "editorial_ingest"}:
         raise ValueError(f"unknown ASR profile: {profile}")
-    cp = _cache_path(clip_path, profile) if use_cache else None
+    cp = _cache_path(clip_path, profile, prompt, keyterms) if use_cache else None
     if cp and cp.exists():
         try:
             import json
@@ -218,7 +273,7 @@ def transcribe(clip_path: str, use_cache: bool = True, *, profile: str = "audit"
             for n, aai_key in enumerate(assemblyai_keys()):
                 global _LAST_AAI_ERROR
                 _LAST_AAI_ERROR = ""
-                res = _assemblyai(wav, aai_key, prompt, keyterms)
+                res = _assemblyai(wav, aai_key, prompt, keyterms, state_path=state_path)
                 if res is not None or not _AAI_ACCOUNT_ERROR.search(_LAST_AAI_ERROR):
                     break
                 print(f"[asr] assemblyai key #{n + 1} refused by account; trying next key", flush=True)
@@ -244,7 +299,7 @@ def transcribe(clip_path: str, use_cache: bool = True, *, profile: str = "audit"
         if cp:
             try:
                 import json
-                cp.write_text(json.dumps(res))
+                private_json(cp, res)
             except Exception:
                 pass                                 # cache write is best-effort
         return res

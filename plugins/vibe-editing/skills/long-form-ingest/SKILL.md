@@ -10,7 +10,7 @@ labels, then a **Gemini listener map** on the same source audio and numbered wor
 agent owns editorial decisions. Do not substitute Groq/local transcription for primary ingest
 without labeling its `PARTIAL` evidence and verifying consequential words.
 
-Read the repository's `ONBOARDING.md` first if connections are missing. Keys load privately from
+Read [onboarding](../../docs/ONBOARDING.md) first if connections are missing. Keys load privately from
 `~/.config/vibe-editing/keys.env`. No keys ship in this plugin.
 
 ```bash
@@ -24,7 +24,10 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/long-form-ingest/scripts/delivery_map.py \
 The shared `lib/_shared/asr.py` uses the live pipeline's editorial profile. Save the full provider
 response, engine/model/profile/evidence status, and word/speaker evidence. Timestamps normalize
 from AssemblyAI milliseconds to seconds; they locate words, not frame-certified edit points.
-Reuse a current transcript rather than paying for it again. The listener's unavailable chunks
+Reuse a current transcript rather than paying for it again. The ingest command saves the accepted
+paid job in an adjacent private `.job.json`; after interrupted polling, repeat the same command
+and output path to resume its ID. An unknown submit outcome requires reconciliation, not a fresh
+receipt or blind resubmission. The listener's unavailable chunks
 remain recorded; a missing Gemini note never approves, rejects or rewrites a cut.
 
 `transcript.json` contains flat `words` and `segments`/`utterances`, with `word`, `start`, `end`,

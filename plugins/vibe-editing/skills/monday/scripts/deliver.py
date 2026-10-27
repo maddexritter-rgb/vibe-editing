@@ -13,6 +13,8 @@ from delivery_ledger import Ledger, atomic_json, fingerprint
 from frameio_client import FrameClient, UA
 from monday_client import MondayClient, CFG
 
+COMPLETE_STATUSES = {'transcoded', 'ready'}
+
 
 def token(value):
     if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9-]+', value):
@@ -196,8 +198,14 @@ def push(plan, ledger_path, fc=None, mc=None, wait_seconds=60):
         key = Path(entry['path']).name
         state = ledger.row(key)
         remote = fc.get(f"{base}/files/{state['fid']}")['data']
-        if remote.get('status') == 'transcoded' or state.get('bytes') == 'complete':
+        if remote.get('status') in COMPLETE_STATUSES or state.get('bytes') == 'complete':
             return
+        if state.get('bytes') in ('dispatching', 'unknown'):
+            upload_status = fc.get(f"{base}/files/{state['fid']}/status")['data']
+            if upload_status.get('upload_complete') is True and not upload_status.get('upload_failed'):
+                ledger.update(key, bytes='complete')
+                return
+            raise RuntimeError('Unknown prior outcome: upload is incomplete or failed; reconcile the recorded asset before retry.')
         if fingerprint(entry['path']) != next(x for x in ledger.data['files'] if x['path'] == entry['path']):
             raise ValueError('Local file changed after planning.')
         ledger.intent(key, 'bytes')
@@ -217,7 +225,7 @@ def push(plan, ledger_path, fc=None, mc=None, wait_seconds=60):
             state = ledger.row(Path(entry['path']).name)
             remote = fc.get(f"{base}/files/{state['fid']}")['data']
             ledger.update(Path(entry['path']).name, remote_status=remote.get('status'))
-            ready.append(remote.get('status') == 'transcoded')
+            ready.append(remote.get('status') in COMPLETE_STATUSES)
         if all(ready):
             break
         if time.monotonic() >= deadline:
