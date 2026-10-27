@@ -6,11 +6,15 @@ ROOT = Path(__file__).resolve().parent
 CONFIG = Path.home() / '.config/vibe-editing'
 KEYS_FILE = CONFIG / 'keys.env'
 FIELDS = (
-    'ASSEMBLYAI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'ANTHROPIC_API_KEY',
-    'EDITORIAL_BRAIN_READ_KEY', 'EDITORIAL_BRAIN_FUNCTION_URL', 'EDITORIAL_BRAIN_PROJECT_REF',
+    'ASSEMBLYAI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY',
     'TOPAZ_API_KEY', 'BUFFER_TOKEN', 'BUFFER_CHANNEL_ID',
     'SUPABASE_URL', 'SUPABASE_KEY', 'SUPABASE_BUCKET',
 )
+
+# Retain previously saved optional-helper values without asking new editors for them.
+# Saving another key must never erase an existing user's private configuration.
+LEGACY_FIELDS = ('ANTHROPIC_API_KEY', 'EDITORIAL_BRAIN_READ_KEY',
+                 'EDITORIAL_BRAIN_FUNCTION_URL', 'EDITORIAL_BRAIN_PROJECT_REF')
 
 
 def read_values(path):
@@ -25,7 +29,7 @@ def read_values(path):
         name, value = name.strip(), value.strip()
         if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
             value = value[1:-1]
-        if name in FIELDS and value and not value.startswith(('PASTE', 'YOUR_', '<')):
+        if name in (*FIELDS, *LEGACY_FIELDS) and value and not value.startswith(('PASTE', 'YOUR_', '<')):
             values[name] = value
     return values
 

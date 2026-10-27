@@ -5,6 +5,22 @@ description: THE single caption skill. There is ONE caption style for ALL footag
 
 # caption-clips — ONE caption style for everything
 
+## Active-agent styling (default)
+
+The current model reads the caption references and the normalized words, then authors the style
+stream itself. No Anthropic/OpenAI key or separate Claude CLI is required. Before rendering:
+run `spice_format.py --words <pinned-words.json> <spice_norm.json>`, read that indexed word list,
+and write `director_stream.json` as `{"words_sha256":"<SHA-256 of spice_norm.json>","words":{"0":{"w":"strong","c":"speaker"}},"voice_spans":[]}`.
+Use the preset's weight/size names and source-supported per-word voice colors (`c:"guest"` for a
+different speaker). Compute words_sha256 from the exact normalized JSON file. Indices refer to those normalized words
+after token merges; changed ASR words invalidate the stream rather than shifting styles silently. Apply voice colors
+per word; keep voice_spans empty. Pass `--words <pinned-words.json> --director <director_stream.json>`
+to spice_caption.py, or set `stages.captions.words` and `stages.captions.director` in the manifest.
+Q&A/multicam wrappers (`qa_assembly.py`, `qa_build.py`, `multifinish.py`) and listicle builds also
+accept `--director`; author it against the normalized words each wrapper writes. Historical
+scripted model directors/selectors are optional legacy utilities, not the default.
+
+
 ## 🔒 LOCKED CAPTION LESSONS (2026-06-12) — every one shipped a wrong burnt caption; do not regress
 
 > Caption-text errors are INVISIBLE to audio QC (the audio is fine; the wrong word is only on screen).
@@ -48,7 +64,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/caption-clips/scripts/spice_caption.py <inp
 ```
 
 This is video-in → spice-captioned-video-out. It runs the locked chain:
-`transcribe (AssemblyAI primary; Groq fallback) → spice_format → caption_director → generate_spice --burn → caption_qc`.
+`transcribe (AssemblyAI primary; Groq fallback) → spice_format → active-agent style stream → generate_spice --burn → caption_qc`.
 The output has the two-layer gblur Premiere shadow, resolution-adaptive scaling, and per-word color.
 
 **Text normalization = `spice_format.py` (The reference editor's company.com spec, locked 2026-06-11).** This single

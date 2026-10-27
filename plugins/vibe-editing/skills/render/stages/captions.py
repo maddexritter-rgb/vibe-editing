@@ -75,7 +75,7 @@ _DEPS = [
     SPICE_CAPTION,
     _acq("caption-clips/scripts/spice_format.py"),
     _acq("caption-clips/scripts/generate_spice.py"),
-    _acq("caption-clips/scripts/caption_director.py"),
+    _acq("caption-clips/scripts/agent_style.py"),
 ]
 
 def _dep_hash() -> str:
@@ -87,7 +87,7 @@ def _dep_hash() -> str:
             h.update(b"missing")
     return h.hexdigest()[:8]
 
-VERSION = "2.4.0+" + _dep_hash()  # 2.4.0: GEN (audio-only, cached) / BURN (pixels) split — pixel-only
+VERSION = "2.5.0+" + _dep_hash()  # 2.4.0: GEN (audio-only, cached) / BURN (pixels) split — pixel-only
                                   # revisions reuse the styled caption file, skipping the ~40-80s director.
 
 
@@ -107,6 +107,14 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
     if config.get("words"):
         wp = Path(config["words"])
         words_path = wp if wp.is_absolute() else (Path(project) / wp)
+    director_path = None
+    if config.get('director'):
+        director = Path(config['director'])
+        director_path = director if director.is_absolute() else (Path(project) / director)
+        if not director_path.is_file():
+            raise FileNotFoundError('Agent-authored caption director stream is missing.')
+    if director_path is None:
+        raise ValueError('The active agent must author captions.director from the normalized transcript before rendering. No extra model API key is needed.')
     corr_path = None
     if config.get("corrections"):
         import json as _json
@@ -129,6 +137,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
         "corr": _fh(corr_path) if corr_path else "none",
         "words": _fh(words_path) if (words_path and words_path.exists()) else "none",
         "deps": _dep_hash(),
+        "agent_director": _fh(director_path),
     }, sort_keys=True).encode()).hexdigest()[:16]
     gendir = Path(work_dir) / "caption_gen_cache" / genkey
     gen_ready = (gendir / "spice_norm.json").exists() and (gendir / "director_stream.json").exists()
@@ -142,6 +151,7 @@ def run(work_dir, config, inputs, inputs_meta, project, manifest, out_path):
         if ctx: gen_cmd += ["--context", ctx]
         if corr_path: gen_cmd += ["--corrections", str(corr_path)]
         if words_path: gen_cmd += ["--words", str(words_path)]
+        gen_cmd += ["--director", str(director_path)]
         r = subprocess.run(gen_cmd)
         if r.returncode != 0:
             raise SystemExit(f"captions stage FAILED (caption-gen exit {r.returncode}) — render aborted")

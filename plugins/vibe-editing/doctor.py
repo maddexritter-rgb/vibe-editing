@@ -45,8 +45,6 @@ deps_missing = False
 for mod in ["numpy", "cv2", "PIL", "scipy", "librosa", "soundfile", "requests"]:
     ok = pyimp(mod); print(f"  py:{mod:<15} {mark(ok)}")
     if not ok: deps_missing = True; crit_ok = False
-anth = pyimp("anthropic"); print(f"  py:anthropic      {mark(anth)}  {Y}(captions){X}")
-if not anth: deps_missing = True
 if deps_missing: pip_need.append("-r requirements.txt")
 
 # ── assets ──
@@ -67,14 +65,13 @@ load_keys()
 def keyset(name):
     return bool(os.environ.get(name))
 aai = keyset("ASSEMBLYAI_API_KEY")
-groq = keyset("GROQ_API_KEY"); anth_key = keyset("ANTHROPIC_API_KEY")
+groq = keyset("GROQ_API_KEY")
 print(f"  AssemblyAI ingest  {mark(aai)}   {Y}(standard /edit transcription){X}")
 print(f"  Gemini listener    {mark(keyset('GEMINI_API_KEY'))}   {Y}(listener notes; missing notes are reported){X}")
 print(f"  Groq audit/fallback {mark(groq)}   {Y}(separate from primary AssemblyAI ingest){X}")
 crit_ok &= aai
 if not aai: notes.append("Open ONBOARDING.md: connect AssemblyAI with onboard.py set ASSEMBLYAI_API_KEY")
-cap = "Anthropic key" if anth_key else "claude CLI / built-in fallback"
-print(f"  caption styling    {mark(anth_key or has('claude'))}   {Y}({cap}){X}")
+print(f"  editorial/style    {mark(True)}   {Y}(active agent; no extra model API key){X}")
 
 # ── verdict + install plan ──
 print("  " + "-" * 36)

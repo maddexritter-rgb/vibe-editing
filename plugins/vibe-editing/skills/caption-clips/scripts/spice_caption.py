@@ -14,8 +14,8 @@ Usage:
 
 Resolution -> preset is auto-picked (spice.json >=2100px, else spice_1080.json) unless --preset given.
 generate_spice is resolution-adaptive on top of that, so the shadow/animation land correctly at any res.
-Requires GROQ_API_KEY (transcription). ANTHROPIC_API_KEY drives the director's color/emphasis; without
-it the director falls back to deterministic styling (still spice, just no LLM-chosen guest color).
+Uses the configured ASR or pinned words for transcription. The active agent supplies --director
+for caption styling; no Anthropic key or separate Claude CLI is required.
 
 SPLIT MODES (2026-06-12) — the caption pipeline has two halves with different dependencies:
   • GENERATE (transcribe -> spice_format -> director) depends ONLY on the audio/words. It's the slow
@@ -160,13 +160,15 @@ def do_gen(inp, gendir, env, args):
     # ONE deterministic caption-text formatter (The reference editor's rules), timestamp-preserving.
     run(["python3", str(SC / "spice_format.py"), "--words", str(word), str(spice)],
         "spice-format (caption normalize)", env)
-    ctx = args.context or (
-        "the creator short-form clip. Read the TRANSCRIPT: IF a guest/caller/attendee asks a question "
-        "or describes THEIR situation and Speaker answers, emit voice_spans over every contiguous GUEST line "
-        "(rendered YELLOW); Speaker's lines stay WHITE. IF Speaker speaks alone, emit NO guest spans. If unsure, "
-        "default to WHITE.")
-    run(["python3", str(SC / "caption_director.py"), str(spice), "--out", str(stream), "--context", ctx],
-        "director", env, fatal=False)
+    # The active agent owns styling. This path never launches a second model/client.
+    if not args.director:
+        raise SystemExit(f'Normalized words are ready at {spice}. Have the active agent author a style stream and rerun with --director <stream.json>. No model API key is needed.')
+    import json as _json
+    sys.path.insert(0, str(SC))
+    from agent_style import load_agent_style
+    style = load_agent_style(args.director, spice)
+    stream.write_text(_json.dumps(style, indent=2))
+    print('caption styling: authored by the active agent', flush=True)
     return spice, stream
 
 
@@ -220,6 +222,7 @@ def main():
                     help="skip GENERATE; burn using spice_norm.json + director_stream.json from this dir.")
     ap.add_argument("--layout-file", type=Path, default=None,
                     help="pre-made per-segment layout.json (skip the analyzer); drives per-cue caption Y.")
+    ap.add_argument("--director", type=Path, help="Style stream authored by the active agent against spice_format words; no extra model call.")
     ap.add_argument("--context", default=None, help="director context (e.g. Q&A speaker-color hint)")
     ap.add_argument("--work", type=Path, default=None, help="work dir for intermediates (default tempdir)")
     ap.add_argument("--preset", type=Path, default=None, help="override preset (else auto by height)")
@@ -253,12 +256,6 @@ def main():
         raise SystemExit("Connect ASSEMBLYAI_API_KEY through onboarding before transcription")
     if groq:
         env["GROQ_API_KEY"] = groq
-    ak = load_key("ANTHROPIC_API_KEY")
-    if ak:
-        env["ANTHROPIC_API_KEY"] = ak
-    elif not args.burn_from:
-        print("  ⚠ no ANTHROPIC_API_KEY — director uses deterministic styling (spice, no LLM color)", flush=True)
-
     work = args.work or Path(tempfile.mkdtemp(prefix="spicecap_"))
     work.mkdir(parents=True, exist_ok=True)
 

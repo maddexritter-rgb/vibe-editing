@@ -3,8 +3,10 @@
 For the first setup or production request (make/edit/deliver clips), read `ONBOARDING.md` and run
 `python3 plugins/vibe-editing/onboard.py status` before starting production. Resume missing setup
 one question at a time. Keys and access follow the **current `/edit` stack** documented in
-`docs/CONNECTIONS.md`: AssemblyAI primary transcription, Gemini listener, team editorial-brain
-read access, and the documented audit/script helper keys. Do not invent substitute providers.
+`docs/CONNECTIONS.md`: AssemblyAI primary transcription, Gemini listener, and selected audit/fallback
+connections. The active agent reads the bundled editorial documents and makes the cut/style
+decisions. Never ask for an Anthropic/OpenAI key or a separate Claude CLI. Team live-brain access
+is provisioned once rather than asking each editor to create a token. Do not invent substitute providers.
 This interview is not required for read-only questions or work on the repository's code/docs.
 
 Do the setup work for the user. Secrets go into private hidden prompts or private local files,
