@@ -2,5 +2,6 @@
   "schema": "vibe-editorial-connection/v1",
   "function_url": "https://qvguldkdswuazylcjmcn.supabase.co/functions/v1/vibe-editorial-read",
   "project_ref": "qvguldkdswuazylcjmcn",
-  "credential_file": "~/.config/vibe-editing/editorial-team.json"
+  "credential_file": "~/.config/vibe-editing/editorial-team.json",
+  "token": "61YT13RtLQO-JAb4GGFQ4fkghLMu9FHEOXqGo529EYBpWaXjO5VOU4_w6-LF4DEj"
 }

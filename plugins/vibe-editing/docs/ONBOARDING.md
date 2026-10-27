@@ -25,7 +25,8 @@ Frame.io OAuth app's Client ID/Client Secret, then sign into Frame in the browse
 where each brand's shorts belong. [Exact steps and the complete optional-connection list](CONNECTIONS.md).
 
 API usage is billed by each provider according to your account. The agent explains the selected
-connections before processing footage. Enter your own credentials; nothing ships with the kit.
+connections before processing footage. Enter your own media/delivery credentials. The dedicated read-only editorial-brain access is
+already bundled; it requires no signup or token entry.
 
 ## Agent instructions — run this interview
 
@@ -56,8 +57,8 @@ API keys does not install those tools. Mark missing companion tooling **pending*
 Walk through **AssemblyAI first**, then **Gemini**, using [CONNECTIONS.md](CONNECTIONS.md).
 Cover Groq only for selected audit/fallback paths. The active model reads the bundled editorial
 documents and makes cut/style decisions; never ask for an Anthropic/OpenAI key or require a
-separate Claude CLI for normal editing. Team live-brain access should be preconfigured once,
-not a token signup task for every editor.
+separate Claude CLI for normal editing. Team live-brain access is already bundled in `config/editorial-brain.json`; verify it with
+`editorial_brain.py` without asking for a token. No separate local credential file is needed.
 
 For each API key: open its account page, give the short click path, let the user enter it in
 `onboard.py set <FIELD>`'s hidden interactive prompt, then run its read-only check. These commands
