@@ -34,6 +34,15 @@ class EditorialReaderTests(unittest.TestCase):
         self.assertEqual(token, 'dummy-test-token-' * 4)
         self.assertEqual(config['project_ref'], 'project')
 
+    def test_bundled_team_token_works_without_a_private_credential_file(self):
+        self.settings['token'] = 'bundled-read-only-fixture-' * 3
+        self.settings.pop('credential_file')
+        self.config.write_text(json.dumps(self.settings))
+        self.credentials.unlink()
+        config, token = editorial_brain.read_connection(self.config)
+        self.assertEqual(token, 'bundled-read-only-fixture-' * 3)
+        self.assertEqual(config['project_ref'], 'project')
+
     def test_unprovisioned_installation_does_not_request_a_new_token(self):
         self.credentials.unlink()
         with self.assertRaisesRegex(ValueError, 'editors do not create their own'):

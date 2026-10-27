@@ -52,10 +52,11 @@ artifacts. No separate LLM API key or second Claude installation is required for
 
 The dedicated read-only team gateway is configured in `config/editorial-brain.json`. The agent
 uses `editorial_brain.py --format <format> --out <project>/10_WORK/brain/context.v1.json`, then reads
-the full returned documents. Its credential is provisioned once for the team, not created by
-each editor. Teammates receive preconfigured access; do not ask each editor to obtain a Supabase
-key or issue their own brain token. Until that connection is configured, use the explicitly
-bundled document set and label it as bundled guidance rather than claiming a live database read.
+the full returned documents. The dedicated read-only token is included in that connection file, so a fresh download
+works without a local credential file or token prompt. Do not ask an editor for a Supabase key
+or a separate brain token. This deliberately shared token authenticates only the document-reading
+gateway; it is not a database-admin key. Personal media/delivery keys remain private. If a live
+read fails, label bundled references as bundled guidance rather than claiming a live read.
 The active model remains the editor whichever document source is used.
 
 ### Groq — audit/fallback connection
@@ -144,8 +145,9 @@ this automatically. Explicit environment values take precedence. Legacy local `c
 remains supported and ignored by Git; the distributed file is now `keys.env.example`.
 
 Frame/Monday use their dedicated private JSON files. YouTube and rclone own their OAuth token
-files. Never paste secrets into an agent conversation, commit them, or hardcode them in MCP
-configuration. For MCP servers that require an environment variable, pass it through the host's
+files. Personal/provider secrets must never be pasted into chat, committed, or hardcoded in MCP
+configuration. The deliberately shared read-only team token in `config/editorial-brain.json` is
+the sole bundled-access exception; it grants document-reading access only. For MCP servers that require an environment variable, pass it through the host's
 private environment and restart that server after saving; Python's key loader cannot update an
 already-running MCP process.
 
