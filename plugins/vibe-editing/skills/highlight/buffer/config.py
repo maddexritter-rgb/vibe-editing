@@ -15,6 +15,12 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
+# Share the same private credential file as guided onboarding.
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from vibe_credentials import load_keys
+load_keys()
+
 # Local config dirs (used if the matching env var is unset).
 BUFFER_CONFIG = Path.home() / ".config" / "buffer"
 SUPABASE_CONFIG = Path.home() / ".config" / "supabase"

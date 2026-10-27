@@ -1,9 +1,17 @@
 {
   "name": "vibe-editing-marketplace",
-  "owner": { "name": "Vibe Editing", "url": "" },
-  "metadata": { "description": "Vibe Editing — a white-label short-form clip pipeline for Claude Code." },
+  "owner": {
+    "name": "Vibe Editing",
+    "url": ""
+  },
+  "metadata": {
+    "description": "Vibe Editing \u2014 a white-label short-form clip pipeline for Claude Code."
+  },
   "plugins": [
-    { "name": "vibe-editing", "source": "./plugins/vibe-editing",
-      "description": "Raw footage -> finished vertical clips (/edit) + horizontal subscriber-growth mids (/highlight). Reframe, caption, render, and a 6-gate self-audit." }
+    {
+      "name": "vibe-editing",
+      "source": "./plugins/vibe-editing",
+      "description": "Raw footage -> finished vertical clips (/edit) + horizontal subscriber-growth mids (/highlight). Reframe, caption, render, and a 6-gate self-audit. Optional Frame.io + Monday review delivery (/monday) with guided setup."
+    }
   ]
 }

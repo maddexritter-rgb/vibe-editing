@@ -1,9 +1,28 @@
 {
   "name": "vibe-editing",
   "displayName": "Vibe Editing",
-  "version": "1.0.0",
-  "description": "Raw footage in, finished captioned vertical clips out \u2014 with one command. Ingests a local file, a URL, or a cloud-drive link; transcribes; mines the best moments with a real editorial rubric; hand-cuts; face-tracks to 9:16; burns word-level captions; mixes music; renders (manifest-driven + stage-cached); and runs a 6-gate self-audit. 17 bundled skills + the full editorial method. Bring your own API keys, footage, music, and brand.",
-  "author": { "name": "Vibe Editing", "url": "" },
+  "version": "1.1.0",
+  "description": "Raw footage in, finished captioned vertical clips out \u2014 with one command. Ingests a local file, a URL, or a cloud-drive link; transcribes; mines the best moments with a real editorial rubric; hand-cuts; face-tracks to 9:16; burns word-level captions; mixes music; renders (manifest-driven + stage-cached); and runs a 6-gate self-audit. Bundled skills + the full editorial method. Bring your own API keys, footage, music, and brand. Optional Frame.io + Monday delivery with per-brand routes and guided account setup.",
+  "author": {
+    "name": "Vibe Editing",
+    "url": ""
+  },
   "license": "MIT",
-  "keywords": ["video","short-form","clips","captions","reframe","face-tracking","ffmpeg","yt-dlp","transcription","9:16","vertical","editing"]
+  "keywords": [
+    "video",
+    "short-form",
+    "clips",
+    "captions",
+    "reframe",
+    "face-tracking",
+    "ffmpeg",
+    "yt-dlp",
+    "transcription",
+    "9:16",
+    "vertical",
+    "editing",
+    "frameio",
+    "monday",
+    "delivery"
+  ]
 }

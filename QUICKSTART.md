@@ -1,15 +1,14 @@
-# Quickstart — 3 steps
+# Quickstart
 
-```
-1.  ./setup.sh                      # installs ffmpeg + deps, runs a health check
-2.  (optional) paste a free Groq key in plugins/vibe-editing/config/keys.env
-3.  In Claude Code:   /edit <your youtube link>
-    or in a terminal: ./bin/vibe-editing "<your youtube link>"
-```
+1. Open the repo in your agent and say **“Set up Vibe Editing for me.”**
+2. Follow the short [onboarding](ONBOARDING.md): tools, the same `/edit` connections, brands and delivery routes.
+3. Give it a video and say **“Make shorts from this.”**
 
-Finished clips land in the project's `20_DELIVER/` folder — already run through the
-6-gate quality audit.
+AssemblyAI is the primary transcriber. The agent walks you through getting your own keys and
+saves them privately. [Full connection inventory](docs/CONNECTIONS.md).
 
-- **No Groq key?** Skip step 2 and `pip install faster-whisper` for free local transcription.
-- **Check readiness any time:** `python3 plugins/vibe-editing/doctor.py`
-- **Make it yours** (font, caption style, hook taste): see `Vibe-Editing-Playbook.pdf` → "Your turn".
+Finished clips stay in the project's `20_DELIVER/`. To deliver a selected batch, say
+**“Push these clips to Frame and Monday.”**
+
+Technical check: `python3 plugins/vibe-editing/doctor.py`. Connection/progress check:
+`python3 plugins/vibe-editing/onboard.py status`. A local doctor pass is not an end-to-end test.

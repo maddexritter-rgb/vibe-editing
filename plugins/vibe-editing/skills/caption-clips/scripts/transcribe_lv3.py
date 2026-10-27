@@ -1,26 +1,7 @@
 #!/usr/bin/env python3
-"""Per-clip Whisper-Large-v3 transcription via Groq.
-
-Why per-clip + lv3 (not boundaries-mode + turbo):
-- Boundaries-mode (one Whisper call over whole source) drops the first/last
-  words of each clip because Whisper's VAD skips quiet starts when surrounded
-  by silence/black.
-- Turbo model occasionally mis-hears proper nouns and contractions
-  (e.g. "who were" → "we were", missing "We" at the very start).
-
-Per-clip lv3 fixes both. Cost is one Groq API call per clip + audio extraction.
-
-Usage:
-    python3 transcribe_lv3.py <source.mp4> <boundaries.json> --out transcripts/
-
-    # Or single clip:
-    python3 transcribe_lv3.py <source.mp4> --start 15.75 --end 62.20 \
-        --out transcripts/clip_00.json
-
-Output JSON per clip:
-    { "clip_index": int, "source_start": float, "source_end": float,
-      "duration": float,
-      "words": [ {"word": str, "start": float, "end": float, "prob": float}, ... ] }
+"""Per-clip transcription with the current AssemblyAI editorial profile.
+The legacy filename/CLI is retained for caption and listicle callers.
+Groq/local paths remain availability fallbacks when the primary key is absent.
 """
 from __future__ import annotations
 # ── engine bundled-keys autoload (config/keys.env) ──
@@ -29,14 +10,10 @@ def _acq_load_keys():
     d = _kp.Path(__file__).resolve()
     for p in (d, *d.parents):
         if (p / ".claude-plugin").is_dir():
-            f = p / "config" / "keys.env"
-            if f.is_file():
-                for _ln in f.read_text().splitlines():
-                    _ln = _ln.strip()
-                    if _ln and not _ln.startswith("#") and "=" in _ln:
-                        _k, _v = _ln.split("=", 1); _k, _v = _k.strip(), _v.strip()
-                        if _k and "PASTE" not in _v and not _ko.environ.get(_k):
-                            _ko.environ[_k] = _v
+            import sys as _ks
+            _ks.path.insert(0, str(p))
+            from vibe_credentials import load_keys
+            load_keys()
             return
 _acq_load_keys()
 # ── end keys ──
@@ -59,7 +36,20 @@ def load_zshrc_api_keys() -> None:
 def transcribe_clip(source: str, start: float, end: float,
                      api_key: str, model: str = 'whisper-large-v3') -> list[dict]:
     """Extract audio for [start, end] from source, send to Groq, return words."""
-    import requests, os
+    if os.environ.get('ASSEMBLYAI_API_KEY'):
+        import tempfile
+        root = next(p for p in Path(__file__).resolve().parents if (p / '.claude-plugin').is_dir())
+        sys.path.insert(0, str(root / 'lib/_shared'))
+        from asr import transcribe, AsrUnavailable
+        with tempfile.TemporaryDirectory() as temp:
+            audio = Path(temp) / 'clip.wav'
+            subprocess.run(['ffmpeg', '-y', '-v', 'error', '-ss', str(start), '-i', str(source),
+                            '-t', str(end-start), '-vn', '-ac', '1', '-ar', '16000', str(audio)], check=True)
+            result = transcribe(str(audio), profile='editorial_ingest')
+        if result['engine'] != 'assemblyai':
+            raise AsrUnavailable('Caption words fell back from AssemblyAI; retain the full ingest evidence before proceeding.')
+        return result['words']
+    import requests
     # Unique temp per PROCESS (+ start for multi-chunk within one) so PARALLEL clips never clobber
     # each other's extracted audio. A fixed path keyed only by start (=0 for every clip) caused
     # cross-contaminated captions when clips transcribed concurrently — never again.
@@ -165,10 +155,10 @@ def main() -> int:
                     help='Seconds between Groq calls (20 RPM = 3s min)')
     args = ap.parse_args()
 
-    load_zshrc_api_keys()
+    # Credentials already loaded privately above; do not scrape shell configuration.
     api_key = os.environ.get('GROQ_API_KEY')
-    if not api_key:
-        # No Groq key → key-free local whisper fallback (same output schema).
+    if not api_key and not os.environ.get('ASSEMBLYAI_API_KEY'):
+        # No cloud key → key-free local whisper fallback (same output schema).
         return _local_fallback(args)
 
     # Single-clip mode

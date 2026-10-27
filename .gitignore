@@ -10,3 +10,21 @@ out/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Delivery credentials, private routes and presigned upload receipts stay local
+**/credentials.json
+**/token.json
+**/routes.json
+**/*.ledger.json
+**/*.ledger.json.lock
+**/*.pem
+
+# Local setup state and credentials (templates remain tracked)
+.env
+.env.*
+!.env.example
+**/config/keys.env
+**/youtube_client_secret*.json
+**/youtube_token*.json
+**/client_secret*.json
+.vibe-editing/

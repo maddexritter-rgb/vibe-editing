@@ -1,19 +1,10 @@
 ---
 name: edit
 description: >
-  THE master editing skill. Raw footage → finished clips. ONE spine for ALL footage — monologue,
-  Q&A, hotline, podcast, multicam, any of it. Auto-detects speaker count (1 or 2) and camera count
-  (1 or multi). This skill ORCHESTRATES — it owns mining and boundary-picking, then POINTS TO
-  the standalone skills for each downstream capability: source-intel (pre-edit footage analysis),
-  script-cut (precision cutting), horizontal-to-vertical (reframing), caption-clips (captions),
-  render (manifest-driven build), and 6 parallel audit agents at delivery: sf-audit (mechanics),
-  scorecard-audit (narrative), audit-visual (face/framing), audit-audio (clipping/pops/levels),
-  audit-captions (accuracy/colors/timing), audit-script (cold viewer/editorial). Each of those
-  skills is the single source of truth for its capability — this skill never duplicates their
-  instructions. Trigger keywords mine clips, cut clips, pull clips,
-  make clips, make shorts, shortify, edit raw footage, find clips, find moments, find good moments,
-  Q&A clip, hotline clip, podcast clip, monologue clip, speaker clip, multicam podcast, host and guest
-  podcast, make shorts from, cut this, pull some clips, find me a clip, script cut, text-based cut.
+  Orchestrate raw footage into short-form clips: ingest, source inspection, moment selection,
+  cutting, reframing, captions, music, rendering and checks. Use for make clips, make shorts,
+  cut clips, mine clips, podcast clips, Q&A clips, hotline clips or multicamera edits.
+  Connect the current editing providers through onboarding before first production use.
 ---
 
 # edit — THE master editing skill
@@ -32,12 +23,11 @@ description: >
 > or point `VIBE_ASSETS` at it. The core cut→reframe→caption→render→audit path needs neither. See the
 > plugin's `INSTALL.md`.
 >
-> **Keys (optional — the kit runs key-free):** transcription defaults to **local whisper** (no key,
-> via `long-form-ingest/scripts/transcribe_local.py`). Set `GROQ_API_KEY` in
-> `${CLAUDE_PLUGIN_ROOT}/config/keys.env` ONLY for the faster cloud path; set `ANTHROPIC_API_KEY`
-> for richest caption styling (else it falls back to the `claude` CLI). No key ships with the kit.
-> **Ingest (Step 0):** `/edit` accepts a **local file**, a **YouTube URL** (fetched with `yt-dlp`), or a
-> **Google Drive link** (via the `footage-fetch` skill) — a bare `/edit <url>` downloads first, then runs.
+> **First run:** follow [onboarding](../../docs/ONBOARDING.md) before production. The current
+> `/edit` source stack is AssemblyAI primary ingest, Gemini listener notes, and scoped editorial-brain
+> access. Groq serves audit/fallback paths; Anthropic supports scripted LLM helpers. Credentials
+> are private and loaded through `vibe_credentials.py`; see [connections](../../docs/CONNECTIONS.md) for exact roles.
+> **Ingest:** accept local files, YouTube URLs via yt-dlp, and Google Drive links via `footage-fetch`.
 
 > **🛑 POST-MORTEM FROM Tier1 Q&A BATCH 2026-06-14 → 2026-06-16 — READ FIRST IF EDITING Q&A**
 >
@@ -540,31 +530,10 @@ is ambiguous, ASK before loading (same rule as DETECT).
 
 ## Step 2 — TRANSCRIBE
 
-Session-level word-level transcript for mining. **Default = local whisper, no key required:**
-
-```bash
-ffmpeg -y -i SOURCE.mp4 -ac 1 -ar 16000 -vn 10_WORK/audio.wav
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/long-form-ingest/scripts/transcribe_local.py \
-    10_WORK/audio.wav --out 10_WORK/words.json
-```
-
-**Optional speed-up — Groq cloud, only if you set a key** (`config/keys.env` → `GROQ_API_KEY`, or env):
-
-```bash
-curl -s https://api.groq.com/openai/v1/audio/transcriptions \
-  -H "Authorization: Bearer $GROQ_API_KEY" \
-  -F file=@10_WORK/audio.wav -F model=whisper-large-v3 \
-  -F response_format=verbose_json -F timestamp_granularities[]=word \
-  -o 10_WORK/words.json
-```
-
-**No key ships with the kit** — local whisper is the default; Groq is an opt-in speed-up. The caption
-stage (`transcribe_lv3.py`) also falls back to local whisper automatically when no key is present.
-
-**Note:** `${CLAUDE_PLUGIN_ROOT}/skills/edit/scripts/transcribe_groq.py` is a per-clip re-transcriber
-(requires `input` + `boundaries` args). Use it in step 7 QC and step 9 captions, NOT here.
-
-For multicam: transcribe each mic ONCE → `10_WORK/_transcripts/<mic>.words.json`, then slice.
+→ Use skill: `long-form-ingest` for AssemblyAI-first source transcription and the Gemini delivery map.
+Reuse its source-ordered words, speaker labels and provider evidence. `GROQ_API_KEY` is for
+fallback/audit helpers; it does not replace AssemblyAI onboarding. Local Whisper is an explicit
+fallback, not an equivalent primary source transcript.
 
 ---
 
@@ -1299,8 +1268,8 @@ show the user, log to `_project.md`.
 
 Brand name format: `BRAND_CONTENTTYPE_SOURCE_Title_Editor_YYYYMMDD_V#` — set in `manifest.output.name`.
 
-your review tool / Monday = SPEAKER ONLY + explicit permission per-file per-conversation. Default:
-deliver locally, show the user, WAIT for "push it."
+External review delivery requires an explicit request for the selected batch. Default: deliver locally.
+When the user asks to push to Frame.io + Monday → Use skill: `monday`.
 
 ---
 

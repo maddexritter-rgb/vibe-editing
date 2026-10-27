@@ -3,52 +3,37 @@ name: long-form-ingest
 description: Transcribe a long-form video to word-level timestamped JSON and detect scene boundaries. Use whenever a new video file enters the pipeline and a transcript does not yet exist. Produces transcript.json (word-level with timestamps), scenes.json (visual cut points), and meta.json (duration, fps, resolution). Every other video skill depends on these outputs.
 ---
 
-# Long-Form Ingest
+# Long-form ingest
 
-Extract three artifacts from a raw video:
-1. `transcript.json` — word-level timestamps from faster-whisper
-2. `scenes.json` — visual scene boundaries from PySceneDetect
-3. `meta.json` — video technical metadata
+Use the current `/edit` transcription stack: **AssemblyAI first**, with disfluencies and speaker
+labels, then a **Gemini listener map** on the same source audio and numbered words. The active
+agent owns editorial decisions. Do not substitute Groq/local transcription for primary ingest
+without labeling its `PARTIAL` evidence and verifying consequential words.
 
-All outputs go to `./out/<source-basename>/`.
-
-## Workflow
+Read [onboarding](../../docs/ONBOARDING.md) first if connections are missing. Keys load privately from
+`~/.config/vibe-editing/keys.env`. No keys ship in this plugin.
 
 ```bash
-# 1. Metadata
-ffprobe -v quiet -print_format json -show_format -show_streams "$INPUT" > meta.json
-
-# 2. Extract audio (mono 16kHz for Whisper)
-ffmpeg -y -i "$INPUT" -ac 1 -ar 16000 -vn _staging/audio.wav
-
-# 3. Transcribe with faster-whisper (word-level)
-python scripts/transcribe.py _staging/audio.wav transcript.json
-
-# 4. Scene detection (optional but cheap — skip for pure talking-head if user says --no-scenes)
-python scripts/scenes.py "$INPUT" scenes.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/long-form-ingest/scripts/transcribe_assemblyai.py \
+  <source-dialogue> --out <project>/10_WORK/ingest/raw_transcript.v1.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/long-form-ingest/scripts/delivery_map.py \
+  --words <project>/10_WORK/ingest/raw_transcript.v1.json --audio <source-dialogue> \
+  --out <project>/10_WORK/ingest/delivery_map.v1.json --cache-dir <project>/10_WORK/ingest/gemini-cache
 ```
 
-## transcript.json schema
+The shared `lib/_shared/asr.py` uses the live pipeline's editorial profile. Save the full provider
+response, engine/model/profile/evidence status, and word/speaker evidence. Timestamps normalize
+from AssemblyAI milliseconds to seconds; they locate words, not frame-certified edit points.
+Reuse a current transcript rather than paying for it again. The ingest command saves the accepted
+paid job in an adjacent private `.job.json`; after interrupted polling, repeat the same command
+and output path to resume its ID. An unknown submit outcome requires reconciliation, not a fresh
+receipt or blind resubmission. The listener's unavailable chunks
+remain recorded; a missing Gemini note never approves, rejects or rewrites a cut.
 
-```json
-{
-  "language": "en",
-  "duration": 2534.12,
-  "segments": [
-    {
-      "id": 0,
-      "start": 0.32,
-      "end": 8.74,
-      "text": " So this one time I got a call from a founder who was convinced his SaaS was dying.",
-      "words": [
-        {"word": " So", "start": 0.32, "end": 0.48, "probability": 0.99},
-        {"word": " this", "start": 0.48, "end": 0.63, "probability": 0.98},
-        ...
-      ]
-    }
-  ]
-}
-```
+`transcript.json` contains flat `words` and `segments`/`utterances`, with `word`, `start`, `end`,
+`confidence`, and `speaker` on word records. Preserve the source clock and stable word order.
+Scene and technical metadata can be collected with the helpers below. Use `transcribe_local.py`
+only for an explicitly selected offline fallback; it is not the standard onboarding route.
 
 ## scenes.json schema
 
@@ -59,50 +44,6 @@ python scripts/scenes.py "$INPUT" scenes.json
     {"start": 128.4, "end": 245.1, "type": "cut"}
   ]
 }
-```
-
-## scripts/transcribe.py
-
-```python
-#!/usr/bin/env python3
-import sys, json
-from faster_whisper import WhisperModel
-
-audio_path, out_path = sys.argv[1], sys.argv[2]
-
-# large-v3 for quality. Use "medium" if GPU-poor.
-model = WhisperModel("large-v3", device="auto", compute_type="auto",
-                     download_root="~/.cache/whisper-models")
-
-segments, info = model.transcribe(
-    audio_path,
-    word_timestamps=True,
-    vad_filter=True,
-    vad_parameters={"min_silence_duration_ms": 500}
-)
-
-out = {
-    "language": info.language,
-    "duration": info.duration,
-    "segments": []
-}
-
-for i, seg in enumerate(segments):
-    out["segments"].append({
-        "id": i,
-        "start": seg.start,
-        "end": seg.end,
-        "text": seg.text,
-        "words": [
-            {"word": w.word, "start": w.start, "end": w.end, "probability": w.probability}
-            for w in (seg.words or [])
-        ]
-    })
-
-with open(out_path, "w") as f:
-    json.dump(out, f, indent=2)
-
-print(f"Transcribed {info.duration:.1f}s in {len(out['segments'])} segments")
 ```
 
 ## scripts/scenes.py
@@ -137,32 +78,8 @@ with open(out_path, "w") as f:
 print(f"Found {len(out['scenes'])} scenes")
 ```
 
-## Defaults
+## Local requirements
 
-- Whisper model: `large-v3` (best quality for podcast speech). Fallback to `medium` if VRAM < 6GB.
-- VAD filter: on, with 500ms silence threshold (prevents hallucinating words in gaps).
-- Scene threshold: 27.0 (PySceneDetect default, good for talking head).
-
-## Performance
-
-- 1hr audio on M2 Pro with `large-v3`: ~6 minutes
-- 1hr audio on CPU (no GPU): ~25 minutes
-- Scene detection 1hr video: ~2 minutes
-
-## Health-check
-
-```bash
-python -c "from faster_whisper import WhisperModel; print('ok')"
-python -c "from scenedetect import detect; print('ok')"
-ffmpeg -version | head -1
-ffprobe -version | head -1
-```
-
-All four must succeed.
-
-## Edge cases
-
-- **Non-English audio:** faster-whisper auto-detects. If the user's audio is multilingual, set `language="en"` explicitly to force.
-- **Very long files (>3hr):** chunk into 30-min segments and stitch transcripts with offset correction.
-- **Background music:** VAD handles it mostly; if noisy, pre-process with `ffmpeg -af "highpass=f=200,lowpass=f=3000"`.
-- **No speech detected:** fail loudly with a clear error. Don't produce an empty transcript silently.
+FFmpeg/ffprobe extract and inspect source audio. Scene detection additionally needs PySceneDetect.
+Cloud ASR uses `httpx` (included in requirements). Local MLX fallback needs `mlx-whisper` installed
+explicitly on a compatible Mac; never claim an unavailable fallback ran.

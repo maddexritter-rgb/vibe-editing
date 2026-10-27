@@ -62,27 +62,24 @@ if not yunet: notes.append("face model yunet.onnx missing — re-download the ki
 
 # ── transcription (key-free by default via local whisper) ──
 print("  " + "-" * 36)
-kf = ROOT / "config/keys.env"; keytxt = kf.read_text() if kf.exists() else ""
+from vibe_credentials import load_keys
+load_keys()
 def keyset(name):
-    if os.environ.get(name): return True
-    for line in keytxt.splitlines():
-        if line.strip().startswith(name + "=") and line.split("=", 1)[1].strip() and "PASTE" not in line:
-            return True
-    return False
-groq = keyset("GROQ_API_KEY"); fw = pyimp("faster_whisper"); anth_key = keyset("ANTHROPIC_API_KEY")
-transcribe_ok = groq or fw
-why = ("Groq — fast" if groq else
-       "local whisper — SLOW on CPU; add a free Groq key for ~10x faster" if fw else
-       "add a free Groq key (console.groq.com) — or pip install faster-whisper")
-print(f"  transcription      {mark(transcribe_ok)}   {Y}({why}){X}")
-if not transcribe_ok: pip_need.append("faster-whisper"); crit_ok = False
+    return bool(os.environ.get(name))
+aai = keyset("ASSEMBLYAI_API_KEY")
+groq = keyset("GROQ_API_KEY"); anth_key = keyset("ANTHROPIC_API_KEY")
+print(f"  AssemblyAI ingest  {mark(aai)}   {Y}(standard /edit transcription){X}")
+print(f"  Gemini listener    {mark(keyset('GEMINI_API_KEY'))}   {Y}(listener notes; missing notes are reported){X}")
+print(f"  Groq audit/fallback {mark(groq)}   {Y}(separate from primary AssemblyAI ingest){X}")
+crit_ok &= aai
+if not aai: notes.append("Open ONBOARDING.md: connect AssemblyAI with onboard.py set ASSEMBLYAI_API_KEY")
 cap = "Anthropic key" if anth_key else "claude CLI / built-in fallback"
-print(f"  caption styling    {mark(True)}   {Y}({cap}){X}")
+print(f"  caption styling    {mark(anth_key or has('claude'))}   {Y}({cap}){X}")
 
 # ── verdict + install plan ──
 print("  " + "-" * 36)
 if crit_ok:
-    print(f"  {G}READY{X} — run:  /edit <your link>   (or ./bin/vibe-editing \"<link>\")\n")
+    print(f"  {G}LOCAL TOOLS READY{X} — connections still need their own read checks; run:  /edit <your link>   (or ./bin/vibe-editing \"<link>\")\n")
     sys.exit(0)
 
 print(f"  {R}NOT READY{X} — install ONLY what's missing:\n")
@@ -93,9 +90,6 @@ if brew_need:
 if pip_need:
     print(f"    cd {ROOT} && python3 -m venv .venv && source .venv/bin/activate \\")
     print(f"        && pip install {' '.join(dict.fromkeys(pip_need))}")
-    if "faster-whisper" in pip_need:
-        print("    # ↑ FASTER alternative: skip whisper and paste a free GROQ_API_KEY into")
-        print("    #   config/keys.env (console.groq.com) — ~10x faster, better quality, no install.")
 for n in notes:
     print(f"    ! {n}")
 print(f"\n  Then re-check:  python3 {Path(__file__).name}\n")

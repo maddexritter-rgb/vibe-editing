@@ -5,6 +5,13 @@ face-tracked **vertical clips**, in the creator's own brand. It's built to be ru
 **non-technical creators** — so when you help someone here, do the work yourself, never make them
 run terminal commands or hand-edit files, and explain what's happening in plain English.
 
+## First production use: onboarding
+Read `ONBOARDING.md` and run `python3 plugins/vibe-editing/onboard.py status` before the first
+setup/editing/delivery job. Resume the saved interview and connect the current `/edit` providers
+from `docs/CONNECTIONS.md`; **AssemblyAI is primary transcription**. Keep team-native bridge or
+editorial-brain prerequisites pending if absent. Ask one question at a time and save secrets
+privately. This requirement does not apply to read-only questions or repo development.
+
 ## Making clips (the main job)
 When the user gives you a video — a YouTube/URL link or a local file — and asks for clips in ANY
 plain-English way ("make clips from this", "cut this up", "shorts from this", "/edit <link>"):
@@ -27,12 +34,15 @@ NOT 9:16 shorts (shorts = the edit pipeline above). The CTA outro is user-suppli
 at `brand/cta/outro.mp4`. POST mode titles + schedules to the user's OWN YouTube via their own
 Google sign-in — never any other account.
 
-## First-time setup (only if it isn't set up yet)
-If `plugins/vibe-editing/.venv` is missing, or `python3 plugins/vibe-editing/doctor.py` reports
-missing tools, set it up first: install only what's missing yourself (ffmpeg, yt-dlp, tesseract,
-rclone via Homebrew; a `.venv` with the kit's deps + faster-whisper). A free Groq key in
-`plugins/vibe-editing/config/keys.env` makes transcription ~10× faster; without it, it uses free
-offline transcription. Full first-run + brand interview: **`ONBOARDING.md`**.
+## Frame.io + Monday delivery
+When the user says "push these clips to Frame and Monday", "send these for review", or `/monday`,
+→ Use skill: `plugins/vibe-editing/skills/monday/SKILL.md`.
+Its first-use interview connects their own accounts and saves per-brand routes; shorts are the default.
+
+## Installation and credentials
+`ONBOARDING.md` owns the first-run interview; `INSTALL.md` owns local installation;
+`docs/CONNECTIONS.md` owns the credential inventory. Keys auto-load privately from
+`~/.config/vibe-editing/keys.env`. Never ask for API keys in chat or write real keys to the repo.
 
 ## Brand it / change it
 Brand assets live in `brand/` (logos, fonts, music, caption-style, animations). When the user wants
