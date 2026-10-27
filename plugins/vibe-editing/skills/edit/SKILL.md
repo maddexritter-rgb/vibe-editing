@@ -24,10 +24,14 @@ description: >
 > plugin's `INSTALL.md`.
 >
 > **First run:** follow [onboarding](../../docs/ONBOARDING.md) before production. The current
-> `/edit` source stack is AssemblyAI primary ingest, Gemini listener notes, and scoped editorial-brain
-> access. Groq serves audit/fallback paths; Anthropic supports scripted LLM helpers. Credentials
-> are private and loaded through `vibe_credentials.py`; see [connections](../../docs/CONNECTIONS.md) for exact roles.
-> **Ingest:** accept local files, YouTube URLs via yt-dlp, and Google Drive links via `footage-fetch`.
+> `/edit` uses AssemblyAI primary ingest and Gemini listener notes. **The active model reads the
+> bundled editorial documents and makes the cut/style decisions itself. No Anthropic/OpenAI key,
+> separate Claude CLI, or per-editor brain token is required.** See [connections](../../docs/CONNECTIONS.md).
+> For preconfigured live team access, run `editorial_brain.py --format <format> --out <project>/10_WORK/brain/context.v1.json`
+> from the plugin root and read the full document receipt. If access is not provisioned, identify
+> the bundled references as bundled guidance rather than claiming a live read.
+> This ownership rule overrides historical scripted selector/director recipes below. Those older
+> external-model helpers are not the default execution path.
 
 > **🛑 POST-MORTEM FROM Tier1 Q&A BATCH 2026-06-14 → 2026-06-16 — READ FIRST IF EDITING Q&A**
 >
@@ -126,10 +130,8 @@ description: >
 audio and runs `spice_caption.py` — it IGNORES any manifest `.ass`, so caption Y is controlled by the
 PRESET, not a hand-built file).
 - Style = **spice** (the the reference editor look), NEVER `pro`/`pro_locked` (legacy flat) and NEVER the
-  deterministic fallback. The director (`caption_director.py`) MUST run for real per-word
-  weight/size/italic/yellow. **If the Anthropic API is out of credits it auto-falls back to the
-  `claude` CLI** (added 2026-06-11) — confirm the log says `director: styled via claude CLI`, NOT
-  `-> deterministic`.
+  deterministic fallback. The active agent authors per-word weight/size/italic/voice styling
+  from the normalized words; pass that file as `captions.director`. No model API or CLI is invoked.
 - **Height = y≈58 (renders ~59%, top of the tank-top V / lav-mic line)** via `captions.preset` +
   **`no_layout: true`**. WHY no_layout: `spice_caption`'s per-angle layout analyzer overrides the
   preset Y to ~50% on single-angle footage, which Operator calls "way too high" — and it silently
@@ -327,7 +329,7 @@ clipping = waveform, not a re-transcript. Prove it on the REAL delivered file be
 - [ ] Cut name-drops / tangents with no value and reshape to land on the payoff (the "Mark Twain,
       right, said earlier" aside — cut it; payoff = "most suffering happens in our own mind").
 
-**CAPTIONS (every clip):** spice via director (confirm `styled via claude CLI`, not `-> deterministic`)
+**CAPTIONS (every clip):** spice via the active agent's authored `captions.director` stream
 · height y≈58 via `captions.preset`+`no_layout:true` (NOT the ~50% layout-analyzer default) · 4K · the
 render stage RE-TRANSCRIBES the cut audio, so captions can't be fixed by editing a hand `.ass`.
 
@@ -338,7 +340,7 @@ from 4K master, head has room (not cut off). No seam wobble.
 `MUSIC_BLACKLIST.txt` (shipped Clair de Lune + Danilo Stankovic — both banned). Distinct per clip.
 
 **MECHANICS (every clip):** 4K (2160×3840) · no stray data/bin_data stream · video==audio duration ·
-no black/frozen frame · hard-end on a live frame. Then the 6-gate audit (step 9).
+no black/frozen frame · hard-end on a live frame. Then a single file-integrity check; optional requested audits follow step 9.
 
 **INFRA before a batch:** `df -h /System/Volumes/Data` (4K caches fill it → out-of-space → corrupt
 output); clear `_segments` scratch + `/tmp` media when low.
@@ -375,14 +377,8 @@ Report each clip's opener + any fix BEFORE delivery: e.g. `AFewBadDays — opens
                       for Q&A clips, captions money-compact). Blocks the all-cam=speaker shortcut on a
                       Q&A clip + missing speaker_mics + caption_lint money errors. Monologue clips
                       pass via documented exception. Hard gate before audit fan-out.
- 9. AUDIT           → 6 parallel agents (ALL must pass — any FAIL blocks delivery):
-                      Gate 1: sf-audit (mechanics)
-                      Gate 2: scorecard-audit (narrative)
-                      Gate 3: audit-visual (face tracking, framing, frozen/black frames; HARD-GATES
-                              over-zoom >20% face-area + within-shot pan >8% dx via --project, 2026-06-12)
-                      Gate 4: audit-audio (word clipping, pops, levels, buzz, clean open/close)
-                      Gate 5: audit-captions (accuracy, speaker colors, timing, formatting, gaps)
-                      Gate 6: audit-script (cold viewer, context→payoff, one-arc, hook, flow, brand safety)
+ 9. OPTIONAL AUDIT  → only when requested; active agent applies the bundled rubric.
+                      No external model call or separate model key is required for normal delivery.
 10. CONFIRM DELIVERY  20_DELIVER/v<N>/ exists; show user; await your review tool permission
                       Optional: `python3 ${CLAUDE_PLUGIN_ROOT}/skills/edit/scripts/contact_sheet.py 20_DELIVER/v<N>/`
                       emits CONTACT_SHEET.jpg (4-col grid of all thumbs, Q&A gold-labeled,
@@ -539,37 +535,15 @@ fallback, not an equivalent primary source transcript.
 
 ## Step 3 — MINE (two passes)
 
-### 3a. thread_mine — cross-timeline threads
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/edit/scripts/thread_mine.py --transcript 10_WORK/words.json --top 8 --out 10_WORK/threads
-```
-Finds moments from DIFFERENT parts of the timeline that connect into one clip.
+### 3a. Active-agent source reading and selection
 
-### 3b. SELECT candidates — chronological moments (pick the selector by LANE)
-**CLIPS (monologue / podcast / talk — bucket 1):** use `clip_select.py`. It scores candidate
-windows by the **empirical lift table** (`config/clip_lift.json`, 602 raw→clip pairs) and proposes
-the open/exit/structure + the exact open/exit lines per candidate, ranked MINE/MAYBE/PASS by lift:
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/edit/scripts/clip_select.py --transcript 10_WORK/words.json --top 12 --out 10_WORK/clips
-```
-The verdict is DATA-DRIVEN (lift_score = 0.35·open + 0.40·exit + 0.25·structure); the human picks
-from the ranked MINE list → cuts.json. The picks are PRIORS, not gospel — the step-9 audits are the
-final bar. Rubric: `prompts/clip_select.md`; rules: `references/longform_clip_patterns.md`.
-
-**Q&A / hotline (DO NOT use for clips):** use `tam_select.py` (its own TAM filter) — untouched:
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/edit/scripts/tam_select.py --transcript 10_WORK/words.json --top 12 --out 10_WORK/tam
-```
-The MINE list = your candidate set. For long Q&A sessions: `tam_pipeline.py` (segment → select per exchange).
-
-Show BOTH pools to the user before cutting.
-
-### 3c. TEXT-FIRST SELECTION (alternative — 2026-06-11)
-Instead of timestamp-based mining, read the full transcript WITH the SOPs loaded and select
-clips AS TEXT: identify the exact sentences that form hook → context → payoff. Then map the
-text selections back to word-level timestamps for cutting. This catches content quality issues
-(dangling references, jargon, missing context) BEFORE any render, and forces the cold viewer
-test (4a) at selection time rather than after.
+Read the full source transcript and the format's bundled editorial references from Step 1b.
+The current model identifies promising interactions, reads their complete context, and designs
+exact spoken hook → reasoning/story → payoff cuts. Write the normal source-linked candidate,
+word-selection and cut artifacts yourself. Use local scripts for deterministic mechanics only.
+Do not launch `thread_mine.py`, `clip_select.py`, `tam_select.py`, or another model API to make
+these decisions, and do not ask the editor for a model API key. The docs are the editorial brain;
+the active agent is the model applying them.
 
 ### 3d. DATA-BACKED ENTRY SIGNALS (longform_clip_patterns, updated 2026-06-14)
 From **602 raw→clip pairs** (lift = winrate ÷ 0.25 base; >1 = real edge). Prioritize moments you can OPEN as:
@@ -973,12 +947,11 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/caption-clips/scripts/jumpcut.py clip.mp4 o
 pure-silence same-take seams with cross-seam Δ>14 and BLOCKS delivery. If it fires, you stripped a
 pause you shouldn't have — merge those two segments back to continuous, don't try to "clean the cut."
 
-### 6e. Content-level trim (tangents, repeats — optional but recommended)
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/lib/_shared/llm_edit.py <transcript.json> --start S --end E --min-keep-ratio 0.60 --out trims.json
-```
+### 6e. Content-level trim
 
-Full cutting rules → `${CLAUDE_PLUGIN_ROOT}/vault/CLIP_CUTTING_PLAYBOOK.md`
+The active agent reads the selected transcript, removes unsupported/redundant spans from its
+source-linked plan, and checks the spoken arc against the bundled cutting playbook. Do not
+launch `llm_edit.py` or a second model to make these editorial decisions.
 
 ---
 
@@ -1176,88 +1149,14 @@ includes VERSION, so all prior outputs of that stage become stale and re-render 
 
 ---
 
-## Step 9 — AUDIT (6 parallel agents — ALL must pass)
+## Step 9 — Optional requested audit
 
-Run ALL 6 audit agents in parallel on the delivered file. Each agent runs in fresh context with
-tunnel vision — it only sees what it's designed to check. This is the adversarial layer: agents
-that know NOTHING about how the clip was made, trying to find problems a viewer would notice.
-
-> **🔒 AUDIT THE PER-CLIP CANONICAL FILE, with `--project` (2026-06-12).** Run the scripted gates on
-> the clip's OWN delivery (`10_WORK/clips/<Slug>/20_DELIVER/v<N>/<Brand-name>.mp4`), NOT a renamed/
-> rank-prefixed copy in a collected folder — the canonical file has `clip.contract.json` beside it and
-> a resolvable `manifest.json`, which is how the gates auto-resolve music bed / speakers / cut seams /
-> subs.ass. Pass `--project <clip_project_dir>` to audit-visual and reqc so they read the real cut
-> seams (a numbered copy with no contract makes every gate treat the clip as one continuous shot with
-> unknown audio → false FAILs). All three scripted gates (visual/audio/captions) were recalibrated
-> 2026-06-12 to PASS verified-good clips and FAIL real defects ONLY when fed the canonical file +
-> project; feeding them a bare collected copy reintroduces the false-positive storm.
-
-**🔒 Every audit agent reads `20_DELIVER/v<N>/clip.contract.json` FIRST** (auto-emitted by
-render at step 8). The contract states what was DECLARED at render time (pipeline, caption
-style + color map, n_segments, first/last labels, expected aspect, music path, speakers,
-delivery target) and what ffprobe OBSERVED (duration, width/height, codec, fps). Each agent
-then verifies its lane against the contract:
-- **sf-audit / scorecard-audit:** declared duration in 8–90s? declared `delivery_target`
-  matches the route (SPEAKER_FRAME vs LOCAL_ONLY)? hard_end flag honored by the last frame?
-- **audit-visual:** observed `width:height` == declared `expected_aspect_wh`? reframe preset
-  matches face position you see?
-- **audit-audio:** observed acodec present? music declared in contract == bed you hear?
-  voice_lufs/music_lufs match the mix?
-- **audit-captions:** declared `color_map` matches the burnt-in colors (host=white,
-  guest=yellow when speakers=2; all-white when speakers=1)? declared `n_events` ≈ caption
-  lines you count?
-- **audit-script:** `first_segment_label`/`last_segment_label` form a hook→payoff arc?
-  declared `context.hook_type` is what the opening line actually does?
-
-**Any mismatch between contract and reality = FAIL.** This makes audits deterministic instead
-of pixel-guessing, and catches the "wrong manifest used for this render" class of bug.
-
-**Gate 1 — sf-audit** (mechanics checklist)
-**→ Use skill: `sf-audit`**
-Face-tracking, captions present, audio levels, no black frames, duration, aspect ratio.
-
-**Gate 2 — scorecard-audit** (narrative quality)
-**→ Use skill: `scorecard-audit`**
-Hook/one-arc/payoff/clarity/pace 5-dim read + brand-risk R1–R4.
-
-**Gate 3 — audit-visual** (visual-only, audio stripped)
-**→ Use skill: `audit-visual`**
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/audit-visual/scripts/check.py \
-    --clip 20_DELIVER/v<N>/clip.mp4 --out 10_WORK/audit_visual.json
-```
-Face tracking stability, framing consistency, frozen frames, black frames, first/last frame, aspect ratio.
-
-**Gate 4 — audit-audio** (audio-only, video stripped)
-**→ Use skill: `audit-audio`**
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/audit-audio/scripts/check.py \
-    --clip 20_DELIVER/v<N>/clip.mp4 --out 10_WORK/audit_audio.json
-```
-Word clipping, pops/clicks at splices, level consistency, buzz/hum, clean open/close.
-
-**Gate 5 — audit-captions** (burnt-in captions check)
-**→ Use skill: `audit-captions`**
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/audit-captions/scripts/check.py \
-    --clip 20_DELIVER/v<N>/clip.mp4 --ass 10_WORK/captions.ass --out 10_WORK/audit_captions.json
-```
-Accuracy vs independent transcription, speaker color attribution, timing sync, formatting, gaps.
-
-**Gate 6 — audit-script** (transcript editorial check)
-**→ Use skill: `audit-script`**
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/audit-script/scripts/check.py \
-    --clip 20_DELIVER/v<N>/clip.mp4 --out 10_WORK/audit_script.json
-```
-Cold viewer test, context→payoff, one-arc rule, hook quality, payoff resolution, logical flow, brand safety, length.
-
-### Audit execution
-- Run all 6 in parallel (they're independent — no dependencies between them)
-- Each produces a JSON report in `10_WORK/`
-- **ALL must return verdict: PASS** to proceed to step 10
-- On FAIL: each agent's report includes specific fix instructions pointing to the right source file
-- Fix → re-render with `--bump` (cache-hits everything else) → re-run ONLY the failed audits
+Default runs use source-informed pre-render construction checks and one final file-integrity
+check. Do not run independent model audits, six-agent fan-outs or scorecards unless the user
+asks for an audit. The active agent can apply the bundled rubric directly to the selected
+source words and output; no Anthropic key or separate Claude CLI is needed. A specifically
+requested independent model integration remains optional, and missing credentials for it do
+not become onboarding requirements for normal editing.
 
 ---
 

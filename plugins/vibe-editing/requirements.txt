@@ -12,8 +12,6 @@ soundfile            # audio I/O (librosa backend)
 matplotlib           # waveform / spectrogram QC plots
 requests             # HTTP (Groq transcription, misc APIs)
 httpx                # HTTP client
-anthropic            # caption director + editorial steps (ANTHROPIC_API_KEY)
-openai               # OpenAI-compatible client
 num2words            # caption number normalization
 wordfreq             # caption emphasis / word-rarity scoring
 pyspellchecker       # caption spell QC
@@ -25,3 +23,6 @@ yt-dlp
 # CPU-friendly (int8). First run downloads the model (~150 MB for 'small'). This is what makes
 # local fallback available. Standard source ingest uses ASSEMBLYAI_API_KEY.
 faster-whisper
+
+# Legacy direct-model helper SDKs (anthropic/openai) are intentionally excluded.
+# Normal editorial and caption decisions use the active agent, without another model client.

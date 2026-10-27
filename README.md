@@ -4,7 +4,7 @@
 
 The full short-form pipeline as a Claude Code plugin: ingest → transcribe → mine the best
 moments (with a real editorial rubric) → hand-cut → face-track to 9:16 → caption → mix music →
-render → 6-gate audit → deliver.
+render → construction/file checks → deliver.
 
 > **Start here:** open **`ONBOARDING.md`** and paste it into the **Claude Code** app — it installs
 > everything for you and interviews you about your brand (logo, fonts, colors, style), then makes a
@@ -22,12 +22,12 @@ Check readiness any time: `python3 plugins/vibe-editing/doctor.py`
 The complete editorial brain ships here (anonymized): the clip-selection rubric, the cut logic,
 the spice caption styling, the audit rules, and the lift patterns. **Out of the box it cuts with
 real editorial judgment, not a generic template** — the clips come out to a high bar, and the
-6-gate audit rejects anything weak.
+active agent applies the editorial references and inspects the result; additional audits are opt-in.
 
 ## What YOU supply
 | You bring | Where |
 |---|---|
-| Editing connections (AssemblyAI, Gemini, team brain access; helper keys as needed) | Agent-guided [onboarding](ONBOARDING.md); secrets saved privately |
+| Editing connections (AssemblyAI, Gemini, agent reads bundled editorial docs; optional audit/fallback keys) | Agent-guided [onboarding](ONBOARDING.md); secrets saved privately |
 | Footage | the project's `00_SOURCE/` (or a URL / drive link) |
 | Music | your royalty-free tracks → `VIBE_MUSIC=/your/music` |
 | Font & brand | swap the bundled free font; set your cover logo / product name |
@@ -42,7 +42,8 @@ Only the things that are pure liability and add nothing to clip quality:
 ## First use and connections
 The agent walks through [ONBOARDING.md](ONBOARDING.md) before the first production job and saves
 progress. **AssemblyAI** is the primary transcription provider, matching the current `/edit`
-pipeline. Gemini, editorial-brain access and helper credentials have distinct roles in the
+pipeline. The active agent reads the bundled editorial documents without an Anthropic/OpenAI key.
+Gemini and optional audit/fallback credentials have distinct roles in the
 [connection inventory](docs/CONNECTIONS.md). Some current team-native integrations are companion
 installations; the inventory names those prerequisites rather than treating keys as a full install.
 

@@ -51,7 +51,7 @@ It runs: cut every soundbite (frame-accurate) → concat → **face-tracked 9:16
 
 **Locked tab look (2026-06-05):** dark frosted **glass capsule**, warm-gold number + white category on one line (`1. OFFER`), ink-centered, soft diffuse shadow, sitting just above the (lowered) caption. Persists per tactic. It's the default whenever the spec carries `cat`s — no flags needed. To change the look, `spice_tabs.py --style mono|glass|ivory` (glass is locked). Geometry lives in `caption-clips/scripts/spice_tabs.py`; caption drop + pill height are `LISTICLE_CAP_PCT` / `PILL_Y_RATIO` in `build_short.py`.
 
-**Caption director:** for best quality, author the 5-axis per-word style stream yourself and pass `--director stream.json` (the editorial styling — color=voice, weight=stress, size on solo payoffs only, etc. — see caption-clips SKILL.md "Dynamic spice captions"). If omitted, build_short auto-runs `caption_director.py` (needs ANTHROPIC_API_KEY), else falls back to generate_spice's light auto-emphasis.
+**Caption director:** for best quality, author the 5-axis per-word style stream yourself and pass `--director stream.json` (the editorial styling — color=voice, weight=stress, size on solo payoffs only, etc. — see caption-clips SKILL.md "Dynamic spice captions"). The active agent authors this stream against the normalized words; pass it with `--director`. Missing styling returns to the active agent instead of starting a model API or CLI.
 
 ### 4. QC before delivery (non-negotiable)
 Pull frames (`ffmpeg -ss <t> -i out.mp4 -frames:v 1`) and **look**: face centered, captions synced + legible, the `#N` lands on each tactic and persists, money/SOP correct, peak ≤ −6 dB. Fix and re-render before calling it V1.

@@ -61,7 +61,6 @@ def verify_key(name):
         'ASSEMBLYAI_API_KEY': ('https://api.assemblyai.com/v2/transcript?limit=1', {'authorization': value}),
         'GROQ_API_KEY': ('https://api.groq.com/openai/v1/models', {'Authorization': 'Bearer ' + value}),
         'GEMINI_API_KEY': ('https://generativelanguage.googleapis.com/v1beta/models', {'x-goog-api-key': value}),
-        'ANTHROPIC_API_KEY': ('https://api.anthropic.com/v1/models', {'x-api-key': value, 'anthropic-version': '2023-06-01'}),
     }
     if name not in requests:
         raise ValueError('Use the feature-specific read-only check in docs/CONNECTIONS.md.')

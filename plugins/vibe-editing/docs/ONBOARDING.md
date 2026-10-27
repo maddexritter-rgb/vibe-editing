@@ -11,15 +11,14 @@ this interview when you first ask it to set up or make clips.
 
 ## What you'll need
 
-These connections follow the current `/edit` pipeline:
+The active agent reads the editorial documents and does the editing reasoning. **No Anthropic
+or OpenAI API key is required.** These are the media-service connections:
 
 | Connection | What it does | Get it from |
 | --- | --- | --- |
 | **AssemblyAI API key** | Primary transcript, word times, speaker labels and disfluencies | [AssemblyAI dashboard](https://www.assemblyai.com/dashboard) → API Keys |
 | **Gemini API key** | Listens to source audio against the numbered transcript | [Google AI Studio](https://aistudio.google.com/apikey) → Create API key |
-| **Editorial-brain read access** | Reads the team's shared editing playbooks | Your team admin supplies its read token, function URL and project reference |
 | **Groq API key** | Existing audit and ASR-fallback helpers; not primary transcription | [Groq Console](https://console.groq.com/keys) → Create API key |
-| **Anthropic API key, when needed** | Scripted caption/editorial LLM helpers | [Claude Console](https://platform.claude.com/settings/keys) → Create key; some helpers support signed-in Claude Code instead |
 
 For **Frame + Monday delivery**, also bring your own Monday personal API token and an Adobe
 Frame.io OAuth app's Client ID/Client Secret, then sign into Frame in the browser. Setup saves
@@ -49,15 +48,16 @@ existing project choice; verify its tooling rather than silently substituting a 
 
 Run the kit's doctor with its `.venv` Python. Install only missing dependencies from `INSTALL.md`.
 The repository contains a portable headless runtime. The current team's native Premiere/Filmcraft
-bridges and editorial-brain integration need their own team-supplied installation/access; having
+bridges need their own team-supplied installation/access; having
 API keys does not install those tools. Mark missing companion tooling **pending**, never ready.
 
 ### 2. Connect the same editing stack
 
-Walk through **AssemblyAI first**, then **Gemini**, then **editorial-brain access** using
-[CONNECTIONS.md](CONNECTIONS.md). Also cover the pipeline's Groq audit/fallback key and
-Anthropic scripted-helper key. Explain the role of each; don't offer a different primary ASR
-provider or describe a local fallback as the same evidence.
+Walk through **AssemblyAI first**, then **Gemini**, using [CONNECTIONS.md](CONNECTIONS.md).
+Cover Groq only for selected audit/fallback paths. The active model reads the bundled editorial
+documents and makes cut/style decisions; never ask for an Anthropic/OpenAI key or require a
+separate Claude CLI for normal editing. Team live-brain access should be preconfigured once,
+not a token signup task for every editor.
 
 For each API key: open its account page, give the short click path, let the user enter it in
 `onboard.py set <FIELD>`'s hidden interactive prompt, then run its read-only check. These commands
@@ -68,7 +68,7 @@ resume after they save it. Never put a secret in command arguments, source code 
 Save only in `~/.config/vibe-editing/` with owner-only permissions. `onboard.py status` reports
 presence, not values. `onboard.py verify <FIELD>` checks read access without processing footage.
 Record **configured**, **verified**, **pending**, or **skipped** precisely; an unavailable model,
-bridge, or playbook stays pending even when a key is accepted. See the feature-specific checks
+bridge stays pending even when a key is accepted. See the feature-specific checks
 in CONNECTIONS.md. Never fetch someone else's existing machine credentials.
 
 ### 3. Connect delivery once
@@ -92,7 +92,7 @@ brand interview. Use the existing brand folders and settings. Don't duplicate se
 
 Show a compact checklist: **connection · configured/read-verified/pending/skipped · next step**.
 Record feature progress with `onboard.py record <feature> --status <status>`. Never record
-`editing: verified` until the intended backend and required playbook access are verified and
+`editing: verified` until the intended backend is verified, the relevant editorial documents have been read, and
 one user-supplied test job has produced a playable local result. A doctor pass or accepted API key
 is not an end-to-end test. Ask for a source file/link when ready for that first job.
 

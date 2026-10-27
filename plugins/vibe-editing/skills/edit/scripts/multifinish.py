@@ -28,6 +28,7 @@ passes this for multi-segment clips (called with t0=0) so dual-color stays right
 seam, where the single-offset t0->wav mapping can't. Absent → speaker color comes from clean.json."""
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -63,7 +64,6 @@ NORMALIZE = CAP / "scripts/normalize_simple.py"
 SPICE_NORM = CAP / "scripts/spice_normalize.py"
 GEN_SPICE = CAP / "scripts/generate_spice.py"
 JUMPCUT = CAP / "scripts/jumpcut.py"
-DIRECTOR = HERE / "director_x.py"
 PRESET = SKILL / "presets/spice.json"  # ONE preset; generate_spice --burn is resolution-adaptive (1080/4K)
 MODEL = Path.home() / ".claude-video-vision/models/ggml-large-v3.bin"
 WCLI = "/opt/homebrew/bin/whisper-cli"
@@ -81,6 +81,7 @@ def dur(p):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--director", type=Path, help="Active-agent style stream; no extra model API.")
     ap.add_argument("--config", required=True, type=Path)
     ap.add_argument("ep")
     ap.add_argument("t0", type=float)
@@ -193,10 +194,12 @@ def main():
     dd["words"] = ws
     norm.write_text(json.dumps(dd, indent=1))
 
-    # 3. director_x (weight/size/italic), strip its per-word color — SPEAKER governs color
+    # 3. Read the current agent's style decisions; speaker mapping still owns color.
     style = capwork / f"{cid}_style.json"
-    run(["python3", DIRECTOR, norm, "--out", style, "--context", context])
-    st = json.loads(style.read_text()) if style.exists() else {"words": {}}
+    import sys as _agent_sys
+    _agent_sys.path.insert(0, str(CAP / 'scripts'))
+    from agent_style import load_agent_style
+    st = load_agent_style(a.director, norm)
     for v in st.get("words", {}).values():
         v.pop("c", None)
 

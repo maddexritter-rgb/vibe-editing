@@ -31,6 +31,7 @@ Usage:
 """
 # ── vibe-editing portable path bootstrap (auto-inserted) ──
 import os as _os, sys as _sys
+import pathlib as _pl
 def _acq_root():
     r = _os.environ.get("VIBE_PIPELINE_ROOT") or _os.environ.get("CLAUDE_PLUGIN_ROOT")
     if r and _os.path.isdir(_os.path.join(r, ".claude-plugin")):
@@ -140,6 +141,7 @@ def dur_of(p):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--director", help="Active-agent style stream for the normalized caption words; no model API.")
     ap.add_argument("--edl", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--format", default="qa", choices=["qa", "hotline", "dtc"])
@@ -766,18 +768,12 @@ def main():
     else:
         edl_guest, _ = resolve_speakers(words, segdur, segs, speaker_at, spk_mic, cam_dir, FF,
                                         debug=bool(os.environ.get("VIBE_DIAR_DEBUG")))
-    director = {}
-    _dr = subprocess.run(["python3", f"{CAPS}/scripts/caption_director.py", f"{work}/w_spice.json",
-                          "--out", f"{work}/director_llm.json", "--context", "q&a workshop"],
-                         capture_output=True, text=True)
-    if _dr.returncode == 0 and os.path.exists(f"{work}/director_llm.json"):
-        llm = json.load(open(f"{work}/director_llm.json")).get("words", {})
-        for k, v in llm.items():
-            v = dict(v); v.pop("c", None)   # EDL owns COLOR; keep the director's weight/size/italic (size axis ON 2026-06-11)
-            director[k] = v
-        print(f"  [captions] director: {len(director)} weighted words (gold-bank few-shot)", flush=True)
-    else:
-        print(f"  [captions] director LLM unavailable; weight-flat fallback ({_dr.stderr.strip()[-80:]})", flush=True)
+    import sys as _agent_sys
+    _agent_sys.path.insert(0, str(CAPS / 'scripts'))
+    from agent_style import load_agent_style
+    authored = load_agent_style(a.director, f"{work}/w_spice.json")
+    director = {k: {name: value for name, value in settings.items() if name != 'c'}
+                for k, settings in authored['words'].items()}
     for i in edl_guest:                                       # EDL color truth: guest = yellow + italic
         d = director.setdefault(str(i), {}); d["c"] = "guest"; d["i"] = True
     json.dump({"words": director, "voice_spans": []}, open(f"{work}/director.json", "w"))

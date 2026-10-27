@@ -9,7 +9,8 @@ run terminal commands or hand-edit files, and explain what's happening in plain 
 Read `ONBOARDING.md` and run `python3 plugins/vibe-editing/onboard.py status` before the first
 setup/editing/delivery job. Resume the saved interview and connect the current `/edit` providers
 from `docs/CONNECTIONS.md`; **AssemblyAI is primary transcription**. Keep team-native bridge or
-editorial-brain prerequisites pending if absent. Ask one question at a time and save secrets
+editorial-document sources labeled accurately. No Anthropic/OpenAI key or separate Claude CLI is
+required: the active model reads those documents and makes editorial/style decisions. Ask one question at a time and save secrets
 privately. This requirement does not apply to read-only questions or repo development.
 
 ## Making clips (the main job)
@@ -20,7 +21,7 @@ plain-English way ("make clips from this", "cut this up", "shorts from this", "/
 2. Put source footage in the project's `00_SOURCE/`, scratch in `10_WORK/`, and finished clips in
    **`20_DELIVER/`**. Show the user the delivered clips when you're done.
 3. The pipeline mines the strongest moments, hand-cuts, face-tracks to 9:16, captions, mixes music,
-   renders, and runs a 6-gate self-audit — a clip that fails a gate doesn't ship.
+   renders, and checks construction/file integrity. Extra audits run only when requested.
 
 You do **not** need the `/edit` slash command or any plugin install — run the workflow directly
 from the scripts in `plugins/vibe-editing/`. (A `/edit` shortcut is available if the user wants it:

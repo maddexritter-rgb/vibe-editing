@@ -1,0 +1,6 @@
+{
+  "schema": "vibe-editorial-connection/v1",
+  "function_url": "https://qvguldkdswuazylcjmcn.supabase.co/functions/v1/vibe-editorial-read",
+  "project_ref": "qvguldkdswuazylcjmcn",
+  "credential_file": "~/.config/vibe-editing/editorial-team.json"
+}

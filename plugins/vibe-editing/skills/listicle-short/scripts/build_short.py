@@ -260,21 +260,12 @@ def main():
     run(['python3', CAP / 'normalize_simple.py', t_raw, t_norm])
     run(['python3', CAP / 'spice_normalize.py', t_norm, t_spice])
 
-    # director style stream: provided > auto (caption_director) > light default
-    style_arg = []
-    director = a.director
-    if not director:
-        ak = shell_key('ANTHROPIC_API_KEY')
-        if ak:
-            auto = work / 'director.json'
-            r = run(['python3', CAP / 'caption_director.py', t_spice, '--out', auto],
-                    env=dict(os.environ, ANTHROPIC_API_KEY=ak))
-            if r.returncode == 0 and auto.exists():
-                director = auto
-    if director:
-        style_arg = ['--style', director]
-    else:
-        print("    (no director stream — using generate_spice light auto-emphasis)")
+    # The active agent authors this stream against t_spice; never start another model.
+    import sys as _agent_sys
+    _agent_sys.path.insert(0, str(CAP))
+    from agent_style import load_agent_style
+    load_agent_style(a.director, t_spice)
+    style_arg = ['--style', a.director]
 
     # category tabs (glass pills) fire when every numbered segment carries a "cat"; else plain #N numbers
     numbered = [s for s in spec['segments'] if s.get('n') is not None]

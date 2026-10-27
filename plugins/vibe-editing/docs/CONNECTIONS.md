@@ -2,7 +2,7 @@
 
 This inventory comes from the **current canonical `/edit` workflow and its owning skills**,
 not the starter kit's older Groq-first examples. It also lists the additional capabilities
-shipped by this repo. Everyone gets their own provider keys and authorized team access.
+shipped by this repo. Editors use their existing agent for editorial reasoning and get their own media/delivery provider credentials.
 Never distribute the author's keys or a Supabase admin key to new editors.
 
 ## Editing stack
@@ -11,11 +11,8 @@ Never distribute the author's keys or a Supabase admin key to new editors.
 | --- | --- | --- |
 | `ASSEMBLYAI_API_KEY` | Primary `editorial_ingest` ASR, with speaker labels and disfluencies | Required for standard source ingest; read check below |
 | `GEMINI_API_KEY` | Source-audio delivery map / listener notes; also supports optional video watching | Standard source-listener connection; missing chunks are recorded unavailable, not fabricated |
-| `EDITORIAL_BRAIN_READ_KEY` | Function-scoped shared-playbook reader | Team-provisioned; not a generic Supabase service key |
-| `EDITORIAL_BRAIN_FUNCTION_URL`, `EDITORIAL_BRAIN_PROJECT_REF` | Bind that reader to the intended brain | Configuration, not API keys; supplied by team admin |
 | `GROQ_API_KEY` | Audit ASR, Whisper availability fallback, and some legacy scripted LLM helpers | Cover during setup; needed for those cloud helpers, not the primary dialogue transcript |
-| `ANTHROPIC_API_KEY` | Scripted LLM helpers, caption director / optional scorecards | Some helpers fall back to a signed-in `claude` CLI; check the actual path before declaring it ready |
-| Agent account / native bridge | Active agent designs cuts; Premiere Agent or Filmcraft executes the chosen native route | Login/install connection, not an extra OpenAI API key |
+| Active agent | Reads the editorial documents and designs cuts/caption styling | Already part of the agent session; no Anthropic/OpenAI API key or separate model call |
 
 ### AssemblyAI — do this first
 
@@ -46,19 +43,20 @@ A provider key does not install the separate video-vision MCP add-on; only confi
 if its tool is actually installed. Footage sent to cloud ASR/listeners leaves the local machine.
 [Official key instructions](https://ai.google.dev/gemini-api/docs/api-key).
 
-### Shared editorial brain — team access, not a self-serve signup
+### Editorial documents — the active agent reads them
 
-Ask the team's admin for **the function URL, project reference and function-scoped read token**.
-Save through `onboard.py set EDITORIAL_BRAIN_FUNCTION_URL`, `... PROJECT_REF` and `... READ_KEY`.
-Launch the team's installed canonical reader through `onboard.py run -- python3 <reader> ...`
-so it inherits the private environment, and run a read-only playbook preflight and verify the
-intended project and returned active playbooks. No new database, schema or admin token is needed.
+The repo includes the editing playbooks under `skills/edit/references/`, editorial prompts under
+`skills/edit/prompts/`, and `vault/CLIP_CUTTING_PLAYBOOK.md`. The agent reads the relevant full
+documents and source transcript, makes the editorial choices itself, and writes the cut/style
+artifacts. No separate LLM API key or second Claude installation is required for those decisions.
 
-The starter repository does not bundle the private shared database, its contents, the complete
-current `assembly-design` package, or native editor bridges. If those companion tools/access
-are missing, record them as pending and tell the user which team installation is needed.
-Do not call this a verified replica of the current native `/edit` pipeline just because keys
-have been saved. Public portable rendering and team-native editing are distinct capabilities.
+The dedicated read-only team gateway is configured in `config/editorial-brain.json`. The agent
+uses `editorial_brain.py --format <format> --out <project>/10_WORK/brain/context.v1.json`, then reads
+the full returned documents. Its credential is provisioned once for the team, not created by
+each editor. Teammates receive preconfigured access; do not ask each editor to obtain a Supabase
+key or issue their own brain token. Until that connection is configured, use the explicitly
+bundled document set and label it as bundled guidance rather than claiming a live database read.
+The active model remains the editor whichever document source is used.
 
 ### Groq — audit/fallback connection
 
@@ -67,15 +65,6 @@ Save with `onboard.py set GROQ_API_KEY`, check with `onboard.py verify GROQ_API_
 The read check lists models without processing media. AssemblyAI stays primary even when both
 keys exist. A fallback transcript is not equivalent speaker/disfluency evidence.
 [Official quickstart](https://console.groq.com/docs/quickstart).
-
-### Anthropic — scripted LLM helpers
-
-[Claude Console](https://platform.claude.com/settings/keys) → **Create key**.
-Save with `onboard.py set ANTHROPIC_API_KEY`, check with `onboard.py verify ANTHROPIC_API_KEY`.
-API usage is billed separately from a chat subscription. If using an existing signed-in Claude
-Code fallback, verify that the specific helper supports it. Do not demand an API key merely
-for the active agent to reason about the edit.
-[Official key instructions](https://platform.claude.com/docs/en/get-api-key).
 
 ## Frame.io + Monday delivery
 
@@ -169,7 +158,9 @@ request and prints no response body. Feature records are progress notes, not aut
 of testing. Record a pending dependency rather than calling it verified. The doctor checks
 local tools and key presence; it does not log into any remote account.
 
-No bundled runtime consumes **ElevenLabs**, **OpenAI API**, **Deepgram**, or **Hugging Face** keys.
+Standard editing needs no **Anthropic** or **OpenAI** API key. Older optional scripted model
+clients remain for explicit legacy use; they are not the normal route or onboarding dependencies.
+No bundled runtime consumes **ElevenLabs**, **Deepgram**, or **Hugging Face** keys.
 Do not ask new editors to obtain them. The `openai` Python package here is used as a Groq-compatible
 client and does not imply an `OPENAI_API_KEY` requirement. Any future integration must update
 this inventory and its owning setup check together.

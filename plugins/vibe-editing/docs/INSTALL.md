@@ -51,8 +51,8 @@ pip install mediapipe        # face-mesh reframe path
 
 Open this repo in your agent and say **“Set up Vibe Editing for me.”** Follow [ONBOARDING.md](ONBOARDING.md).
 The current `/edit` stack uses AssemblyAI for primary transcription, Gemini for source-listener
-notes, and team-granted editorial-brain access. Groq and Anthropic support the documented
-fallback/audit/script paths. [All credentials and exact setup steps](CONNECTIONS.md).
+notes. The active agent reads the bundled editorial documents; no Anthropic/OpenAI key is
+required. Groq is only for selected audit/fallback paths. [All credentials and exact setup steps](CONNECTIONS.md).
 
 The agent runs `python3 plugins/vibe-editing/onboard.py set ASSEMBLYAI_API_KEY` in an interactive
 terminal so you can enter your key privately, then repeats for selected connections. Real values
