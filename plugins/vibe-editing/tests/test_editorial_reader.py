@@ -43,6 +43,12 @@ class EditorialReaderTests(unittest.TestCase):
         self.assertEqual(token, 'bundled-read-only-fixture-' * 3)
         self.assertEqual(config['project_ref'], 'project')
 
+    def test_distributed_connection_config_has_no_bundled_token(self):
+        """The repository may ship an endpoint, but not its bearer credential."""
+        shipped = json.loads((ROOT / 'config' / 'editorial-brain.json').read_text())
+        self.assertNotIn('token', shipped)
+        self.assertTrue(shipped.get('credential_file'))
+
     def test_unprovisioned_installation_does_not_request_a_new_token(self):
         self.credentials.unlink()
         with self.assertRaisesRegex(ValueError, 'editors do not create their own'):
